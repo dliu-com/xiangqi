@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+STACK_NAME="${STACK_NAME:-XiangqiSite}"
+AWS_REGION="${AWS_REGION:-eu-west-1}"
+export AWS_REGION
+
+# Resolve only this application's stack outputs; never write to a shared bucket.
+SITE_BUCKET_NAME="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='SiteBucketName'].OutputValue" --output text)"
+DISTRIBUTION_ID="$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='DistributionId'].OutputValue" --output text)"
+if [[ -z "$SITE_BUCKET_NAME" || "$SITE_BUCKET_NAME" == "None" || -z "$DISTRIBUTION_ID" || "$DISTRIBUTION_ID" == "None" ]]; then
+  echo "The Xiangqi stack must be deployed before publishing its files." >&2
+  exit 1
+fi
+
+node --check "$PROJECT_DIR/src/app.js"
+node --check "$PROJECT_DIR/src/engine.js"
+# Upload dependencies first and the entrypoint last. Scripts, the stylesheet and the logo are held at the edge for a day
+# (the invalidation below refreshes them on publish); HTML pages are always revalidated.
+for filename in engine.js agent-tools.js app.js styles.css favicon.svg 404.html; do
+  cache='public, max-age=300, s-maxage=86400, stale-while-revalidate=86400'
+  case "$filename" in
+    *.js) mime='text/javascript; charset=utf-8' ;;
+    *.css) mime='text/css; charset=utf-8' ;;
+    *.svg) mime='image/svg+xml' ;;
+    *.html) mime='text/html; charset=utf-8'; cache='public, max-age=0, must-revalidate' ;;
+  esac
+  aws s3 cp "$PROJECT_DIR/src/$filename" "s3://$SITE_BUCKET_NAME/$filename" --content-type "$mime" --cache-control "$cache" --only-show-errors
+done
+aws s3 cp "$PROJECT_DIR/src/index.html" "s3://$SITE_BUCKET_NAME/index.html" --content-type 'text/html; charset=utf-8' --cache-control 'no-cache, max-age=0, must-revalidate' --only-show-errors
+INVALIDATION_ID="$(aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths '/*' --query 'Invalidation.Id' --output text)"
+aws cloudfront wait invalidation-completed --distribution-id "$DISTRIBUTION_ID" --id "$INVALIDATION_ID"
+aws cloudformation describe-stacks --stack-name "$STACK_NAME" --query "Stacks[0].Outputs[?OutputKey=='WebsiteUrl'].OutputValue" --output text

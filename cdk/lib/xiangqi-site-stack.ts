@@ -1,0 +1,161 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import { Construct } from 'constructs';
+import {
+  aws_certificatemanager as acm,
+  aws_cloudfront as cloudfront,
+  aws_cloudfront_origins as origins,
+  aws_dynamodb as dynamodb,
+  aws_iam as iam,
+  aws_lambda as lambda,
+  aws_logs as logs,
+  aws_route53 as route53,
+  aws_route53_targets as targets,
+  aws_s3 as s3,
+  CfnOutput,
+  Duration,
+  Fn,
+  RemovalPolicy,
+  Stack,
+  StackProps,
+} from 'aws-cdk-lib';
+
+export class XiangqiSiteStack extends Stack {
+  constructor(scope: Construct, id: string, props: StackProps = {}) {
+    super(scope, id, props);
+
+    const rootDomain = Fn.importValue('MainDomain');
+    const domainName = Fn.join('', ['xiangqi.', rootDomain]);
+    const hostedZone = route53.HostedZone.fromHostedZoneAttributes(this, 'ImportedHostedZone', {
+      zoneName: rootDomain,
+      hostedZoneId: Fn.importValue('MainHostedZoneId'),
+    });
+
+    const bucket = new s3.Bucket(this, 'SiteBucket', {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      publicReadAccess: false,
+      removalPolicy: RemovalPolicy.RETAIN,
+      versioned: true,
+    });
+
+    // Match the existing apps: CloudFront requires its certificate in us-east-1.
+    const certificate = new acm.DnsValidatedCertificate(this, 'SiteCertificate', {
+      domainName,
+      hostedZone,
+      region: 'us-east-1',
+    });
+
+    const cachePolicy = new cloudfront.CachePolicy(this, 'SiteCachePolicy', {
+      minTtl: Duration.seconds(0),
+      defaultTtl: Duration.minutes(5),
+      // Lets static assets honour s-maxage=86400; HTML is published with no-cache, so it is not held at the edge.
+      maxTtl: Duration.days(1),
+      enableAcceptEncodingGzip: true,
+      enableAcceptEncodingBrotli: true,
+    });
+
+    const headers = new cloudfront.ResponseHeadersPolicy(this, 'SiteResponseHeaders', {
+      securityHeadersBehavior: {
+        contentTypeOptions: { override: true },
+        frameOptions: { frameOption: cloudfront.HeadersFrameOption.DENY, override: true },
+        referrerPolicy: { referrerPolicy: cloudfront.HeadersReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN, override: true },
+        strictTransportSecurity: { accessControlMaxAge: Duration.days(365), includeSubdomains: false, override: true },
+      },
+    });
+
+    const gameTable = new dynamodb.Table(this, 'GameState', {
+      partitionKey: { name: 'gameId', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+      removalPolicy: RemovalPolicy.RETAIN,
+    });
+    const root = path.join(__dirname, '..', '..');
+    // Reuse the exact browser rules, and keep the deployed handler dependency-free.
+    const engineSource = fs.readFileSync(path.join(root, 'src/engine.js'), 'utf8').replace(/^export /gm, '');
+    const serviceSource = fs.readFileSync(path.join(root, 'backend/game-service.js'), 'utf8')
+      .replace(/^import .*;\n/gm, '').replace(/^export /gm, '');
+    const handlerSource = fs.readFileSync(path.join(root, 'backend/handler.cjs'), 'utf8');
+    const gameHandler = new lambda.Function(this, 'GameHandler', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      handler: 'index.handler',
+      timeout: Duration.seconds(20),
+      memorySize: 256,
+      logGroup: new logs.LogGroup(this, 'GameLogs', { retention: logs.RetentionDays.ONE_WEEK, removalPolicy: RemovalPolicy.DESTROY }),
+      environment: { TABLE_NAME: gameTable.tableName, SITE_ORIGIN: Fn.join('', ['https://', domainName]) },
+      code: lambda.Code.fromInline([engineSource, serviceSource, handlerSource].join('\n')),
+    });
+    gameTable.grant(gameHandler, 'dynamodb:GetItem', 'dynamodb:PutItem');
+    const functionUrl = gameHandler.addFunctionUrl({ authType: lambda.FunctionUrlAuthType.AWS_IAM });
+
+    // Central traffic monitoring (dliu-com/traffic-monitor): shared visitor cookie; TrafficMonitor
+    // creates this distribution's access-log delivery (CloudFront standard logging v2).
+    const visitorIdFunction = cloudfront.Function.fromFunctionAttributes(this, 'VisitorId', {
+      functionArn: Fn.importValue('TrafficVisitorFunctionArn'),
+      functionName: 'dliu-visitor-id',
+    });
+    // Makes CloudFront add CloudFront-Viewer-City so the visitor function can log the city.
+    const trafficGeoPolicy = cloudfront.OriginRequestPolicy.fromOriginRequestPolicyId(
+      this, 'TrafficGeo', Fn.importValue('TrafficGeoOriginRequestPolicyId'));
+
+    const distribution = new cloudfront.Distribution(this, 'SiteDistribution', {
+      defaultBehavior: {
+        origin: origins.S3BucketOrigin.withOriginAccessControl(bucket),
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+        cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy,
+        originRequestPolicy: trafficGeoPolicy,
+        responseHeadersPolicy: headers,
+        compress: true,
+        functionAssociations: [{ eventType: cloudfront.FunctionEventType.VIEWER_RESPONSE, function: visitorIdFunction }],
+      },
+      additionalBehaviors: {
+        'api/*': {
+          origin: origins.FunctionUrlOrigin.withOriginAccessControl(functionUrl),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        },
+      },
+      domainNames: [domainName],
+      certificate,
+      httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
+      defaultRootObject: 'index.html',
+      minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
+      errorResponses: [
+        { httpStatus: 403, responseHttpStatus: 404, responsePagePath: '/404.html', ttl: Duration.seconds(30) },
+        { httpStatus: 404, responseHttpStatus: 404, responsePagePath: '/404.html', ttl: Duration.seconds(30) },
+      ],
+    });
+    // IncludeCookies is the only legacy logging setting v2 honours: it puts the dl_vid cookie in the logs.
+    (distribution.node.defaultChild as cloudfront.CfnDistribution)
+      .addPropertyOverride('DistributionConfig.Logging', { IncludeCookies: true });
+
+    // New function URLs require both invoke permissions. CDK adds InvokeFunctionUrl.
+    gameHandler.addPermission('CloudFrontInvokeFunction', {
+      principal: new iam.ServicePrincipal('cloudfront.amazonaws.com'),
+      action: 'lambda:InvokeFunction',
+      sourceArn: distribution.distributionArn,
+      invokedViaFunctionUrl: true,
+    });
+
+    new route53.ARecord(this, 'SiteAliasRecord', {
+      recordName: 'xiangqi', zone: hostedZone,
+      target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distribution)),
+    });
+    new route53.AaaaRecord(this, 'SiteAliasIpv6Record', {
+      recordName: 'xiangqi', zone: hostedZone,
+      target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(distribution)),
+    });
+
+    new CfnOutput(this, 'GameTableName', { value: gameTable.tableName });
+    new CfnOutput(this, 'GameFunctionName', { value: gameHandler.functionName });
+    new CfnOutput(this, 'SiteBucketName', { value: bucket.bucketName });
+    new CfnOutput(this, 'DistributionId', { value: distribution.distributionId });
+    new CfnOutput(this, 'CloudFrontDomainName', { value: distribution.distributionDomainName });
+    new CfnOutput(this, 'WebsiteUrl', { value: Fn.join('', ['https://', domainName]) });
+  }
+}

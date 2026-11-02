@@ -1,0 +1,9 @@
+{
+  "name": "xiangqi-across-the-river",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/dev-server.mjs",
+    "test": "node --test tests/*.test.js"
+  }
+}

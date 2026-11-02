@@ -1,0 +1,38 @@
+pipeline {
+    agent {
+        label 'deployer-slave-amazon-linux'
+    }
+
+    options {
+        timeout(time: 45, unit: 'MINUTES')
+        timestamps()
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        AWS_REGION = 'eu-west-1'
+    }
+
+    stages {
+        stage('Install') {
+            steps {
+                sh 'make install'
+            }
+        }
+        stage('Test') {
+            steps {
+                sh 'make test'
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh 'make deploy-infra publish'
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
