@@ -3,21 +3,31 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>页面不存在 · 中国象棋</title>
+  <title data-en="Page not found · Xiangqi">页面不存在 · 中国象棋</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl.css">
   <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/i18n.js"></script>
 </head>
 <body class="dl-page">
   <header class="dl-header">
-    <a class="dl-brand" href="/"><img class="dl-logo" src="/favicon.svg" alt="" width="32" height="32">中国象棋</a>
-    <nav class="dl-nav" aria-label="Site"></nav>
+    <a class="dl-brand" href="/"><img class="dl-logo" src="/favicon.svg" alt="" width="32" height="32"><span data-en="Xiangqi">中国象棋</span></a>
+    <nav class="dl-nav" aria-label="网站" data-en-label="Site">
+      <a class="dl-button" href="/docs" data-en="Docs">文档</a>
+      <div class="dl-language">
+        <button type="button" class="dl-button dl-language-toggle" aria-controls="dl-languages" aria-expanded="false" aria-label="Language / 语言">文/A</button>
+        <div id="dl-languages" class="dl-languages" role="group" aria-label="Language / 语言">
+          <button type="button" data-language="zh" lang="zh-CN" aria-pressed="true">中文</button>
+          <button type="button" data-language="en" lang="en" aria-pressed="false">English</button>
+        </div>
+      </div>
+    </nav>
   </header>
   <main class="dl-main dl-narrow">
-    <h1>此处无棋。</h1>
-    <p class="dl-muted">页面不存在，返回棋盘继续对弈吧。</p>
-    <a class="dl-button dl-button-primary" href="/">返回棋盘</a>
+    <h1 data-en="Nothing to play here.">此处无棋。</h1>
+    <p class="dl-muted" data-en="This page does not exist. Head back to the board and keep playing.">页面不存在，返回棋盘继续对弈吧。</p>
+    <a class="dl-button dl-button-primary" href="/" data-en="Back to the board">返回棋盘</a>
   </main>
-  <footer class="dl-footer"><a class="dl-footer-logo" href="https://dliu.com" aria-label="dliu.com"><img src="https://files.dliu.com/dliu.com/favicon.png" alt="" width="24" height="24"></a> <a href="https://dliu.com">dliu.com</a></footer>
+  <footer class="dl-footer"><a class="dl-footer-logo" href="https://dliu.com" aria-label="dliu.com"><img src="https://files.dliu.com/dliu.com/favicon.png" alt="" width="24" height="24"></a> <a href="https://dliu.com">dliu.com</a> · <a href="/docs" data-en="Docs">文档</a></footer>
 </body>
 </html>

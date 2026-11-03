@@ -8,11 +8,19 @@ import { registerGameTools } from '../src/agent-tools.js';
 import { createState, transition } from '../backend/game-service.js';
 
 const source = readFileSync(new URL('../src/app.js', import.meta.url), 'utf8').replace(/^import .*;\n/gm, '');
+const i18nSource = readFileSync(new URL('../src/i18n.js', import.meta.url), 'utf8').replace(/^export /gm, '');
+// The language module as a browser with this saved choice would load it.
+function loadI18n(saved) {
+  const context = { localStorage: { getItem: key => (key === 'xiangqi-language' ? saved : null) } };
+  vm.runInNewContext(`${i18nSource}\nglobalThis.i18n = { t, sideName, pieceName, RULES_EN, translateError, LANGUAGE_EVENT, currentLanguage };`, context);
+  return context.i18n;
+}
+const chinese = loadI18n(null);
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const response = (status, data) => ({ ok: status === 200, status, json: async () => structuredClone(data) });
 
 // Run the real client with a minimal DOM and a controllable, local-only API.
-async function createClient(initialState = createState(), storage = new Map()) {
+async function createClient(initialState = createState(), storage = new Map(), language = chinese) {
   const elements = new Map(), tools = new Map(), requests = [];
   const intervals = [];
   const documentListeners = new Map();
@@ -41,7 +49,7 @@ async function createClient(initialState = createState(), storage = new Map()) {
     modelContext: { registerTool(tool) { tools.set(tool.name, tool); } },
   };
   vm.runInNewContext(source, {
-    ...engine, registerGameTools, document, window: { addEventListener() {} },
+    ...engine, ...language, registerGameTools, document, window: { addEventListener() {} },
     localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
     console, AbortController, AbortSignal, TextEncoder, structuredClone, crypto: webcrypto,
     setTimeout, clearTimeout,
@@ -381,4 +389,38 @@ test('rejected native fullscreen still provides an exit-able board view', async 
   assert.equal(client.elements.get('fullscreen-button').disabled, false);
   await client.elements.get('fullscreen-button').click();
   assert.equal(client.document.documentElement.classList.contains('board-fullscreen'), false);
+});
+
+test('Chinese is the default; a saved English choice shows the game in English', async () => {
+  assert.equal(chinese.currentLanguage(), 'zh');
+  assert.equal(loadI18n('fr').currentLanguage(), 'zh');
+  const english = loadI18n('en');
+  assert.equal(english.currentLanguage(), 'en');
+  assert.equal(english.translateError('这步棋不符合规则，请重新选择。'), 'That move is not legal. Choose again.');
+  assert.equal(chinese.translateError('这步棋不符合规则，请重新选择。'), '这步棋不符合规则，请重新选择。');
+
+  const zh = await createClient();
+  assert.equal(zh.elements.get('turn-title').textContent, '轮到红方');
+  assert.match(zh.elements.get('sync-status').textContent, /已同步/);
+
+  const en = await createClient(createState(), new Map(), english);
+  assert.equal(en.elements.get('turn-title').textContent, 'Red to move');
+  assert.equal(en.elements.get('turn-kicker').textContent, 'Red moves first');
+  assert.match(en.elements.get('sync-status').textContent, /^Synced/);
+  assert.match(en.elements.get('piece-rules').innerHTML, /<h3>Chariot<\/h3>/);
+  await en.move();
+  assert.equal(en.elements.get('turn-title').textContent, 'Black to move');
+  assert.equal(en.elements.get('move-count').textContent, '1 move');
+  assert.match(en.elements.get('history').innerHTML, /title="Red /);
+});
+
+test('the client refuses game data with unknown sides or piece types before drawing it', async () => {
+  const forged = createState();
+  forged.board[0] = { side: '<img src=x onerror=alert(1)>', type: 'chariot' };
+  const client = await createClient(createState());
+  client.onGet(() => response(200, { state: { ...forged, revision: 5 } }));
+  client.intervals[0].callback();
+  await flush();
+  assert.equal(client.state().revision, 0);
+  assert.doesNotMatch(client.elements.get('history').innerHTML + client.elements.get('top-player').innerHTML, /onerror/);
 });

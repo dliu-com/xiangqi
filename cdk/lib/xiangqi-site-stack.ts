@@ -20,6 +20,19 @@ import {
   StackProps,
 } from 'aws-cdk-lib';
 
+export const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' https://files.dliu.com/dliu.com/ui/",
+  "img-src 'self' https://files.dliu.com/dliu.com/",
+  "font-src 'self'",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "frame-ancestors 'none'",
+].join('; ');
+
 export class XiangqiSiteStack extends Stack {
   constructor(scope: Construct, id: string, props: StackProps = {}) {
     super(scope, id, props);
@@ -56,13 +69,21 @@ export class XiangqiSiteStack extends Stack {
       enableAcceptEncodingBrotli: true,
     });
 
+    // Pages and /api/game share these headers. Scripts come only from this site; the shared dliu.com look only
+    // needs its stylesheet folder and logo (https://files.dliu.com/dliu.com/README.md).
     const headers = new cloudfront.ResponseHeadersPolicy(this, 'SiteResponseHeaders', {
       securityHeadersBehavior: {
+        contentSecurityPolicy: { contentSecurityPolicy: CONTENT_SECURITY_POLICY, override: true },
         contentTypeOptions: { override: true },
         frameOptions: { frameOption: cloudfront.HeadersFrameOption.DENY, override: true },
         referrerPolicy: { referrerPolicy: cloudfront.HeadersReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN, override: true },
         strictTransportSecurity: { accessControlMaxAge: Duration.days(365), includeSubdomains: false, override: true },
       },
+      customHeadersBehavior: {
+        customHeaders: [{ header: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()', override: true }],
+      },
+      // S3 would otherwise reveal its server name, object versions and encryption details.
+      removeHeaders: ['server', 'x-amz-version-id', 'x-amz-server-side-encryption'],
     });
 
     const gameTable = new dynamodb.Table(this, 'GameState', {
@@ -82,6 +103,8 @@ export class XiangqiSiteStack extends Stack {
       handler: 'index.handler',
       timeout: Duration.seconds(20),
       memorySize: 256,
+      // Caps a request flood so it cannot use up the Lambda concurrency the account's other sites share.
+      reservedConcurrentExecutions: 10,
       logGroup: new logs.LogGroup(this, 'GameLogs', { retention: logs.RetentionDays.ONE_WEEK, removalPolicy: RemovalPolicy.DESTROY }),
       environment: { TABLE_NAME: gameTable.tableName, SITE_ORIGIN: Fn.join('', ['https://', domainName]) },
       code: lambda.Code.fromInline([engineSource, serviceSource, handlerSource].join('\n')),
@@ -118,6 +141,7 @@ export class XiangqiSiteStack extends Stack {
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+          responseHeadersPolicy: headers,
         },
       },
       domainNames: [domainName],

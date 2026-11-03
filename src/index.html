@@ -4,17 +4,25 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
-  <meta name="description" content="中国象棋双人对弈。自动保存棋局，刷新页面或在其他设备上打开，即可继续对局。">
-  <title>中国象棋 · 双人对弈</title>
+  <meta name="description" content="中国象棋双人对弈。自动保存棋局，刷新页面或在其他设备上打开，即可继续对局。" data-en-content="Two-player Xiangqi (Chinese chess). The game saves itself, so you can refresh or continue on another device.">
+  <title data-en="Xiangqi · Two-player Chinese chess">中国象棋 · 双人对弈</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl.css">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body class="dl-page">
   <header class="dl-header">
-    <a class="dl-brand" href="/"><img class="dl-logo" src="/favicon.svg" alt="" width="32" height="32">中国象棋</a>
-    <nav class="dl-nav" aria-label="Site">
-      <button id="guide-button" class="dl-button" type="button">行棋规则</button>
+    <a class="dl-brand" href="/"><img class="dl-logo" src="/favicon.svg" alt="" width="32" height="32"><span data-en="Xiangqi">中国象棋</span></a>
+    <nav class="dl-nav" aria-label="网站" data-en-label="Site">
+      <a class="dl-button" href="/docs" data-en="Docs">文档</a>
+      <button id="guide-button" class="dl-button" type="button" data-en="Rules">行棋规则</button>
+      <div class="dl-language">
+        <button type="button" class="dl-button dl-language-toggle" aria-controls="dl-languages" aria-expanded="false" aria-label="Language / 语言">文/A</button>
+        <div id="dl-languages" class="dl-languages" role="group" aria-label="Language / 语言">
+          <button type="button" data-language="zh" lang="zh-CN" aria-pressed="true">中文</button>
+          <button type="button" data-language="en" lang="en" aria-pressed="false">English</button>
+        </div>
+      </div>
     </nav>
   </header>
 
@@ -25,22 +33,22 @@
     </section>
 
     <div class="game-layout">
-      <section class="board-area" aria-label="中国象棋对局">
-        <section class="dl-panel play-settings" aria-label="对弈设置">
-          <div class="dl-segmented choice-group" role="group" aria-label="对弈方式">
-            <button id="mode-shared" type="button" aria-pressed="true">2 人同一设备</button>
-            <button id="mode-separate" type="button" aria-pressed="false">2 人不同设备</button>
+      <section class="board-area" aria-label="中国象棋对局" data-en-label="Xiangqi game">
+        <section class="dl-panel play-settings" aria-label="对弈设置" data-en-label="Play settings">
+          <div class="dl-segmented choice-group" role="group" aria-label="对弈方式" data-en-label="How you play">
+            <button id="mode-shared" type="button" aria-pressed="true" data-en="2 players, one device">2 人同一设备</button>
+            <button id="mode-separate" type="button" aria-pressed="false" data-en="2 players, two devices">2 人不同设备</button>
           </div>
-          <div id="side-choices" class="dl-segmented choice-group side-choices" role="group" aria-label="选择执棋方" hidden>
-            <button id="side-red" type="button" aria-pressed="true"><span class="side-symbol red" aria-hidden="true">帅</span>我是红方</button>
-            <button id="side-black" type="button" aria-pressed="false"><span class="side-symbol black" aria-hidden="true">将</span>我是黑方</button>
+          <div id="side-choices" class="dl-segmented choice-group side-choices" role="group" aria-label="选择执棋方" data-en-label="Choose your side" hidden>
+            <button id="side-red" type="button" aria-pressed="true"><span class="side-symbol red" aria-hidden="true">帅</span><span data-en="I play Red">我是红方</span></button>
+            <button id="side-black" type="button" aria-pressed="false"><span class="side-symbol black" aria-hidden="true">将</span><span data-en="I play Black">我是黑方</span></button>
           </div>
           <p id="mode-help" class="mode-help" role="status">面对面对弈：双方棋子分别朝向各自玩家。</p>
         </section>
         <div id="fullscreen-status" class="fullscreen-status" role="status" aria-live="polite"></div>
         <div id="top-player" class="player-bar"></div>
         <div class="board-stage"><div class="board-frame">
-          <div id="board" class="board" role="group" aria-label="象棋棋盘。使用方向键移动焦点，回车键选棋或落子，退出键取消选择。">
+          <div id="board" class="board" role="group" aria-label="象棋棋盘。使用方向键移动焦点，回车键选棋或落子，退出键取消选择。" data-en-label="Xiangqi board. Arrow keys move the focus, Enter selects a piece or plays a move, Escape cancels.">
             <svg class="board-lines" viewBox="0 0 900 1000" aria-hidden="true">
               <defs><pattern id="grain" width="140" height="8" patternUnits="userSpaceOnUse"><path d="M0 2 Q35 0 70 2 T140 2" fill="none" stroke="#77552d" stroke-opacity=".045"/></pattern></defs>
               <rect width="900" height="1000" fill="url(#grain)"/>
@@ -58,55 +66,55 @@
         </div></div>
         <div id="bottom-player" class="player-bar"></div>
         <div class="board-toolbar">
-          <button id="undo-button" class="dl-button" type="button" disabled><svg class="dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5 4 10l5 5M4 10h9a6 6 0 0 1 6 6v3"/></svg>悔棋</button>
+          <button id="undo-button" class="dl-button" type="button" disabled><svg class="dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5 4 10l5 5M4 10h9a6 6 0 0 1 6 6v3"/></svg><span data-en="Undo">悔棋</span></button>
           <span id="flip-divider" class="toolbar-divider"></span>
-          <button id="flip-button" class="dl-button" type="button"><svg class="dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3M17 8l-3 3M7 16l3-3"/></svg>交换上下方</button>
-          <button id="fullscreen-button" class="dl-button" type="button" aria-pressed="false">全屏棋盘</button>
-          <span class="board-hint dl-muted">落子之间，自有乾坤。</span>
+          <button id="flip-button" class="dl-button" type="button"><svg class="dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3M17 8l-3 3M7 16l3-3"/></svg><span data-en="Flip board">交换上下方</span></button>
+          <button id="fullscreen-button" class="dl-button" type="button" aria-pressed="false" data-en="Full-screen board">全屏棋盘</button>
+          <span class="board-hint dl-muted" data-en="Every move tells a story.">落子之间，自有乾坤。</span>
         </div>
       </section>
 
-      <aside class="game-panel" aria-label="棋局信息">
-        <div class="panel-heading"><span class="eyebrow">楚河汉界 · 双人对弈</span><span class="mode-badge"><svg class="dl-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M17 14a5 5 0 0 1 4 5"/></svg>共享棋局</span></div>
+      <aside class="game-panel" aria-label="棋局信息" data-en-label="Game info">
+        <div class="panel-heading"><span class="eyebrow" data-en="River and border · Two players">楚河汉界 · 双人对弈</span><span class="mode-badge"><svg class="dl-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M17 14a5 5 0 0 1 4 5"/></svg><span data-en="Shared game">共享棋局</span></span></div>
         <div class="turn-section">
           <div id="turn-icon" class="turn-piece red" lang="zh">帅</div>
           <div><p id="turn-kicker" class="turn-kicker">红先黑后</p><h1 id="turn-title">轮到红方</h1></div>
         </div>
         <p id="status-detail" class="status-detail">红方先行。点击棋子，查看可落子的位置。</p>
         <div id="announcement" class="dl-visually-hidden" role="status" aria-live="polite" aria-atomic="true"></div>
-        <div class="sync-line" role="status"><span id="sync-status">正在载入棋局…</span><button id="sync-retry" class="dl-button dl-button-link" type="button" hidden>重试</button></div>
-        <button id="new-game-button" class="dl-button dl-button-primary" type="button"><svg class="dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>再开一局</button>
+        <div class="sync-line" role="status"><span id="sync-status">正在载入棋局…</span><button id="sync-retry" class="dl-button dl-button-link" type="button" hidden data-en="Retry">重试</button></div>
+        <button id="new-game-button" class="dl-button dl-button-primary" type="button"><svg class="dl-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span data-en="New game">再开一局</span></button>
 
         <section class="history-section" aria-labelledby="history-title">
-          <div class="section-heading"><h2 id="history-title">棋谱</h2><span id="move-count" class="count-label">共 0 步</span></div>
-          <div class="history-columns" aria-hidden="true"><span>#</span><span><i class="red-dot"></i>红方</span><span><i class="black-dot"></i>黑方</span></div>
-          <div id="history" class="history-list" role="log" aria-label="行棋记录" aria-live="off"></div>
+          <div class="section-heading"><h2 id="history-title" data-en="Moves">棋谱</h2><span id="move-count" class="count-label">共 0 步</span></div>
+          <div class="history-columns" aria-hidden="true"><span>#</span><span><i class="red-dot"></i><span data-en="Red">红方</span></span><span><i class="black-dot"></i><span data-en="Black">黑方</span></span></div>
+          <div id="history" class="history-list" role="log" aria-label="行棋记录" data-en-label="Move record" aria-live="off"></div>
         </section>
 
-        <div class="game-actions"><button id="draw-button" class="dl-button" type="button">双方和棋</button><button id="resign-button" class="dl-button dl-button-danger" type="button">认输</button></div>
+        <div class="game-actions"><button id="draw-button" class="dl-button" type="button" data-en="Agree a draw">双方和棋</button><button id="resign-button" class="dl-button dl-button-danger" type="button" data-en="Resign">认输</button></div>
       </aside>
     </div>
   </main>
-  <footer class="dl-footer"><a class="dl-footer-logo" href="https://dliu.com" aria-label="dliu.com"><img src="https://files.dliu.com/dliu.com/favicon.png" alt="" width="24" height="24"></a> <a href="https://dliu.com">dliu.com</a> · <a href="https://www.wxf-xiangqi.org/images/wxf-rules/2018_World_XiangQi_Rules_English2018.pdf" target="_blank" rel="noopener noreferrer">世界象棋联合会规则</a></footer>
+  <footer class="dl-footer"><a class="dl-footer-logo" href="https://dliu.com" aria-label="dliu.com"><img src="https://files.dliu.com/dliu.com/favicon.png" alt="" width="24" height="24"></a> <a href="https://dliu.com">dliu.com</a> · <a href="https://www.wxf-xiangqi.org/images/wxf-rules/2018_World_XiangQi_Rules_English2018.pdf" target="_blank" rel="noopener noreferrer" data-en="WXF rules">世界象棋联合会规则</a> · <a href="/docs" data-en="Docs">文档</a></footer>
 
   <dialog id="guide-dialog" class="dl-dialog guide-dialog" aria-labelledby="guide-title">
-    <div class="dl-dialog-head"><h2 id="guide-title">行棋有道</h2><button type="button" class="dl-dialog-close close-dialog" aria-label="关闭规则">✕</button></div>
+    <div class="dl-dialog-head"><h2 id="guide-title" data-en="How to play">行棋有道</h2><button type="button" class="dl-dialog-close close-dialog" aria-label="关闭规则" data-en-label="Close the rules">✕</button></div>
     <div class="dl-dialog-body">
-    <p class="guide-intro">棋子放在棋盘线的交叉点上。红方先行，双方轮流走一步。将死对方，或让对方无棋可走（困毙），即可获胜。</p>
+    <p class="guide-intro" data-en="Pieces stand on the intersections. Red moves first, then the sides take turns, one move each. Win by checkmating your opponent, or by leaving them with no legal move (stalemate).">棋子放在棋盘线的交叉点上。红方先行，双方轮流走一步。将死对方，或让对方无棋可走（困毙），即可获胜。</p>
     <div id="piece-rules" class="piece-rules"></div>
-    <div class="guide-note"><strong>保护好你的将帅。</strong> 不能让己方将帅处于被将军的状态，也不能让将帅直接照面。棋盘只会标记符合规则的落点。</div>
-    <p class="casual-note">本应用适合休闲对弈：重复局面、长将、长捉和自然限着，由双方协商裁定。双方同意后，可点击“双方和棋”。</p>
-    <p class="keyboard-note">键盘操作：方向键移动焦点 · 回车键选棋或落子 · Esc 取消选择。</p>
-    <a class="rules-source" href="https://www.wxf-xiangqi.org/images/wxf-rules/2018_World_XiangQi_Rules_English2018.pdf" target="_blank" rel="noopener noreferrer">世界象棋联合会官方规则 ↗</a>
+    <div class="guide-note"><strong data-en="Protect your general.">保护好你的将帅。</strong> <span data-en="You may not leave your own general in check, and the two generals may never face each other on an open file. The board marks only legal points.">不能让己方将帅处于被将军的状态，也不能让将帅直接照面。棋盘只会标记符合规则的落点。</span></div>
+    <p class="casual-note" data-en="This app is for casual play: repetitions, perpetual check, perpetual chasing and move limits are left to the players. When both agree, press “Agree a draw”.">本应用适合休闲对弈：重复局面、长将、长捉和自然限着，由双方协商裁定。双方同意后，可点击“双方和棋”。</p>
+    <p class="keyboard-note" data-en="Keyboard: arrow keys move the focus · Enter selects or moves · Esc cancels.">键盘操作：方向键移动焦点 · 回车键选棋或落子 · Esc 取消选择。</p>
+    <a class="rules-source" href="https://www.wxf-xiangqi.org/images/wxf-rules/2018_World_XiangQi_Rules_English2018.pdf" target="_blank" rel="noopener noreferrer" data-en="Official WXF rules ↗">世界象棋联合会官方规则 ↗</a>
     </div>
-    <div class="dl-dialog-actions"><button class="dl-button dl-button-primary close-dialog" type="button">返回棋盘</button></div>
+    <div class="dl-dialog-actions"><button class="dl-button dl-button-primary close-dialog" type="button" data-en="Back to the board">返回棋盘</button></div>
   </dialog>
 
   <dialog id="confirm-dialog" class="dl-dialog confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-description">
     <div class="dl-dialog-head"><h2 id="confirm-title">重新开始一局？</h2></div>
     <div class="dl-dialog-body"><p id="confirm-description">当前棋局和棋谱将被清空，所有设备都会同步更新。</p></div>
-    <div class="dl-dialog-actions"><button id="confirm-cancel" class="dl-button" type="button" autofocus>继续对弈</button><button id="confirm-accept" class="dl-button dl-button-primary" type="button">再开一局</button></div>
+    <div class="dl-dialog-actions"><button id="confirm-cancel" class="dl-button" type="button" autofocus data-en="Keep playing">继续对弈</button><button id="confirm-accept" class="dl-button dl-button-primary" type="button">再开一局</button></div>
   </dialog>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="/app.js"></script>
 </body>
 </html>

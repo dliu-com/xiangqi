@@ -1,0 +1,156 @@
+// Small DOM/SVG diagram kit for the docs page (from dliu-com/traffic-monitor, as used by video.dliu.com).
+const NS = 'http://www.w3.org/2000/svg';
+const ICONS = {
+  browser: ['#4b6575', [['rect', { x: 3, y: 4.5, width: 18, height: 15, rx: 2 }], ['path', { d: 'M3 9h18' }], ['circle', { cx: 6, cy: 6.8, r: 0.6, fill: '#fff' }], ['circle', { cx: 8.3, cy: 6.8, r: 0.6, fill: '#fff' }]]],
+  cloudfront: ['#8c4fff', [['circle', { cx: 12, cy: 12, r: 8.5 }], ['ellipse', { cx: 12, cy: 12, rx: 3.6, ry: 8.5 }], ['path', { d: 'M3.5 12h17M5 7.5h14M5 16.5h14' }]]],
+  lambda: ['#ed7100', [['path', { d: 'M6.5 4h3.5l8 16' }], ['path', { d: 'M12.3 10.6 6.5 20' }]]],
+  s3: ['#7aa116', [['ellipse', { cx: 12, cy: 6, rx: 8, ry: 2.6 }], ['path', { d: 'M4 6l1.9 12.6c.3 1.6 2.9 2.6 6.1 2.6s5.8-1 6.1-2.6L20 6' }]]],
+  key: ['#dd344c', [['circle', { cx: 8, cy: 15.5, r: 4.2 }], ['path', { d: 'M11 12.5 19.5 4M16 7.5l2.6 2.6M13.8 9.7l2 2' }]]],
+  shield: ['#dd344c', [['path', { d: 'M12 2.8l7.5 3v5.4c0 4.8-3.2 8.7-7.5 10.1-4.3-1.4-7.5-5.3-7.5-10.1V5.8z' }], ['path', { d: 'M8.8 12.2l2.2 2.2 4.3-4.6' }]]],
+  lock: ['#dd344c', [['rect', { x: 4.5, y: 10.5, width: 15, height: 10.5, rx: 2 }], ['path', { d: 'M8 10.5V7.8a4 4 0 0 1 8 0v2.7M12 14.5v3' }]]],
+  users: ['#805719', [['circle', { cx: 9, cy: 8.5, r: 3.2 }], ['path', { d: 'M2.8 19.5c.6-3.5 3.2-5.5 6.2-5.5s5.6 2 6.2 5.5' }], ['circle', { cx: 16.6, cy: 9, r: 2.6 }], ['path', { d: 'M16.4 14.2c2.5.1 4.3 1.9 4.9 4.8' }]]],
+  bot: ['#7b2d2d', [['rect', { x: 4.5, y: 8, width: 15, height: 11.5, rx: 3 }], ['path', { d: 'M12 8V4.5M9.5 16h5' }], ['circle', { cx: 9.2, cy: 12.3, r: 1.2, fill: '#fff' }], ['circle', { cx: 14.8, cy: 12.3, r: 1.2, fill: '#fff' }]]],
+  clock: ['#147cab', [['circle', { cx: 12, cy: 12, r: 8.5 }], ['path', { d: 'M12 7.5V12l3.2 2' }]]],
+  power: ['#2e8540', [['path', { d: 'M12 3v8.5' }], ['path', { d: 'M7.2 6.6a7.5 7.5 0 1 0 9.6 0' }]]],
+  budget: ['#2e8540', [['circle', { cx: 12, cy: 12, r: 8.5 }], ['path', { d: 'M14.8 8.6c-.5-1.1-1.6-1.7-2.9-1.7-1.6 0-2.8.9-2.8 2.1 0 2.9 5.9 1.6 5.9 4.7 0 1.3-1.3 2.3-3 2.3-1.4 0-2.6-.6-3.1-1.8M12 5v1.9M12 16v2.9' }]]],
+  filter: ['#8c4fff', [['path', { d: 'M3.5 5h17l-6.5 8v6l-4 2v-8z' }]]],
+  eye: ['#147cab', [['path', { d: 'M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z' }], ['circle', { cx: 12, cy: 12, r: 3 }]]],
+  page: ['#4b6575', [['path', { d: 'M6 2.5h8.5l4 4V21.5H6z' }], ['path', { d: 'M14.5 2.5v4h4M9 12h6.5M9 15.5h6.5' }]]],
+  dynamodb: ['#2e27ad', [['ellipse', { cx: 12, cy: 5.5, rx: 7.5, ry: 2.5 }], ['path', { d: 'M4.5 5.5v13c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5v-13M4.5 12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5' }]]],
+  board: ['#805719', [['rect', { x: 3.5, y: 3.5, width: 17, height: 17, rx: 1.5 }], ['path', { d: 'M3.5 9.2h17M3.5 14.8h17M9.2 3.5v17M14.8 3.5v17' }], ['circle', { cx: 14.8, cy: 9.2, r: 2.2, fill: '#fff' }]]],
+  upload: ['#2e8540', [['path', { d: 'M12 15.5V4.5M7.5 9 12 4.5 16.5 9' }], ['path', { d: 'M4.5 15v3.5a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5V15' }]]],
+  route53: ['#8c4fff', [['circle', { cx: 12, cy: 12, r: 8.5 }], ['path', { d: 'M12 3.5v17M3.5 12h17' }]]],
+};
+
+const svgNode = (tag, attrs) => {
+  const node = document.createElementNS(NS, tag);
+  for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+  return node;
+};
+const el = (tag, className, text) => {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+};
+
+export function icon(name) {
+  const [colour, parts] = ICONS[name] ?? ICONS.browser;
+  const box = el('span', 'dg-icon');
+  box.style.setProperty('--dg', colour);
+  box.setAttribute('aria-hidden', 'true');
+  const svg = svgNode('svg', { viewBox: '0 0 24 24', focusable: 'false' });
+  for (const [tag, attrs] of parts) svg.append(svgNode(tag, attrs));
+  box.append(svg);
+  return box;
+}
+
+function arrow() {
+  const span = el('span', 'dg-arrow');
+  const svg = svgNode('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' });
+  svg.append(svgNode('path', { d: 'M4 12h15M13 6l6 6-6 6' }));
+  span.append(svg);
+  return span;
+}
+
+function card(step, className, number) {
+  const node = el('div', className);
+  if (number != null) node.append(el('span', 'dg-num', String(number)));
+  if (step.icon) node.append(icon(step.icon));
+  const text = el('span', 'dg-text');
+  text.append(el('strong', '', step.title));
+  if (step.text) text.append(el('small', '', step.text));
+  node.append(text);
+  return node;
+}
+
+function frame(title, className) {
+  const figure = el('figure', 'dg' + (className ? ' ' + className : ''));
+  if (title) figure.append(el('figcaption', '', title));
+  return figure;
+}
+
+function withNote(figure, text) {
+  if (text) figure.append(el('p', 'dg-note', text));
+  return figure;
+}
+
+export function flow({ title, steps, note, numbered = false }) {
+  const figure = frame(title);
+  const list = el('div', 'dg-flow');
+  list.setAttribute('role', 'list');
+  steps.forEach((step, index) => {
+    if (index) list.append(arrow());
+    const item = card(step, 'dg-step' + (step.tone ? ' dg-' + step.tone : ''), numbered ? index + 1 : null);
+    item.setAttribute('role', 'listitem');
+    list.append(item);
+  });
+  figure.append(list);
+  return withNote(figure, note);
+}
+
+export function tiers({ title, rows, note }) {
+  const figure = frame(title, 'dg-tiers');
+  rows.forEach((row, index) => {
+    if (index) {
+      const link = el('div', 'dg-link');
+      link.append(arrow());
+      if (row.link) link.append(el('span', '', row.link));
+      figure.append(link);
+    }
+    const tier = el('div', 'dg-tier' + (row.tone ? ' dg-' + row.tone : ''));
+    const label = el('div', 'dg-tier-label');
+    if (row.badge) label.append(el('span', 'dg-badge', row.badge));
+    label.append(el('strong', '', row.label));
+    tier.append(label);
+    const nodes = el('div', 'dg-tier-nodes');
+    for (const node of row.nodes) nodes.append(card(node, 'dg-node'));
+    tier.append(nodes);
+    figure.append(tier);
+  });
+  return withNote(figure, note);
+}
+
+export function stats(items) {
+  const grid = el('div', 'dg-stats');
+  for (const [value, label, name] of items) {
+    const box = el('div', 'dg-stat');
+    if (name) box.append(icon(name));
+    const text = el('span', 'dg-text');
+    text.append(el('strong', '', value), el('small', '', label));
+    box.append(text);
+    grid.append(box);
+  }
+  return grid;
+}
+
+// A cell is a string or { text, className }.
+export function table(headers, rows) {
+  const wrap = el('div', 'table-wrap');
+  const tableNode = el('table');
+  const head = el('tr');
+  for (const header of headers) head.append(el('th', '', header));
+  tableNode.append(el('thead'), el('tbody'));
+  tableNode.tHead.append(head);
+  for (const row of rows) {
+    const tr = el('tr');
+    for (const cell of row) tr.append(typeof cell === 'string' ? el('td', '', cell) : el('td', cell.className, cell.text));
+    tableNode.tBodies[0].append(tr);
+  }
+  wrap.append(tableNode);
+  return wrap;
+}
+
+export function more(summary, ...content) {
+  const details = el('details', 'dg-more');
+  const body = el('div');
+  body.append(...content);
+  details.append(el('summary', '', summary), body);
+  return details;
+}
+
+export function callout(name, text) {
+  const box = el('div', 'dg-callout');
+  box.append(icon(name), el('span', '', text));
+  return box;
+}

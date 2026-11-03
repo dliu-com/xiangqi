@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title data-en="Technical architecture · Docs · Xiangqi">技术架构 · 文档 · 中国象棋</title>
+  <meta name="description" content="xiangqi.dliu.com 的工作原理：技术架构、运行成本与安全。" data-en-content="How xiangqi.dliu.com works: technical architecture, running costs and security.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl.css">
+  <link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl-docs.css">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/docs.js"></script>
+</head>
+<body class="dl-page">
+  <header class="dl-header">
+    <a class="dl-brand" href="/"><img class="dl-logo" src="/favicon.svg" alt="" width="32" height="32"><span data-en="Xiangqi">中国象棋</span></a>
+    <nav class="dl-nav" aria-label="网站" data-en-label="Site">
+      <a class="dl-button" href="/docs" aria-current="page" data-en="Docs">文档</a>
+      <div class="dl-language">
+        <button type="button" class="dl-button dl-language-toggle" aria-controls="dl-languages" aria-expanded="false" aria-label="Language / 语言">文/A</button>
+        <div id="dl-languages" class="dl-languages" role="group" aria-label="Language / 语言">
+          <button type="button" data-language="zh" lang="zh-CN" aria-pressed="true">中文</button>
+          <button type="button" data-language="en" lang="en" aria-pressed="false">English</button>
+        </div>
+      </div>
+    </nav>
+  </header>
+  <main class="dl-main dl-docs-main">
+    <nav class="dl-tabs" aria-label="文档章节" data-en-label="Docs sections">
+      <a href="/docs#architecture" data-tab="architecture" aria-current="page" data-en="Technical architecture">技术架构</a>
+      <a href="/docs#cost" data-tab="cost" data-en="Cost">运行成本</a>
+      <a href="/docs#security" data-tab="security" data-en="Security">安全</a>
+    </nav>
+    <article id="architecture" class="dl-docs">
+      <h2 data-en="How it works">工作原理</h2>
+      <noscript><p>此页面的图示需要 JavaScript。The diagrams on this page need JavaScript.</p></noscript>
+    </article>
+    <article id="cost" class="dl-docs" hidden>
+      <h2 data-en="Running costs">运行成本</h2>
+    </article>
+    <article id="security" class="dl-docs" hidden>
+      <h2 data-en="Security">安全</h2>
+    </article>
+  </main>
+  <footer class="dl-footer"><a class="dl-footer-logo" href="https://dliu.com" aria-label="dliu.com"><img src="https://files.dliu.com/dliu.com/favicon.png" alt="" width="24" height="24"></a> <a href="https://dliu.com">dliu.com</a> · <a href="https://www.wxf-xiangqi.org/images/wxf-rules/2018_World_XiangQi_Rules_English2018.pdf" target="_blank" rel="noopener noreferrer" data-en="WXF rules">世界象棋联合会规则</a> · <a href="/docs" data-en="Docs">文档</a></footer>
+</body>
+</html>

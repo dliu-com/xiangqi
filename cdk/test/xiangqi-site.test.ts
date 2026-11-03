@@ -1,6 +1,6 @@
 import { App } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { XiangqiSiteStack } from '../lib/xiangqi-site-stack';
+import { CONTENT_SECURITY_POLICY, XiangqiSiteStack } from '../lib/xiangqi-site-stack';
 
 const template = Template.fromStack(new XiangqiSiteStack(new App(), 'TestXiangqi'));
 
@@ -67,6 +67,33 @@ test('game persistence is on-demand and requests reach Lambda only through Cloud
       PathPattern: 'api/*', CachePolicyId: cloudfrontNoCache(),
     })]) }),
   });
+});
+
+test('pages and the API send strict security headers and hide S3 server details', () => {
+  template.hasResourceProperties('AWS::CloudFront::ResponseHeadersPolicy', {
+    ResponseHeadersPolicyConfig: Match.objectLike({
+      SecurityHeadersConfig: Match.objectLike({
+        ContentSecurityPolicy: { ContentSecurityPolicy: CONTENT_SECURITY_POLICY, Override: true },
+        FrameOptions: { FrameOption: 'DENY', Override: true },
+        ContentTypeOptions: { Override: true },
+        StrictTransportSecurity: Match.objectLike({ AccessControlMaxAgeSec: 31536000 }),
+      }),
+      CustomHeadersConfig: { Items: [Match.objectLike({ Header: 'Permissions-Policy' })] },
+      RemoveHeadersConfig: { Items: Match.arrayWith([{ Header: 'server' }, { Header: 'x-amz-version-id' }, { Header: 'x-amz-server-side-encryption' }]) },
+    }),
+  });
+  for (const directive of ["script-src 'self'", "frame-ancestors 'none'", "object-src 'none'", 'https://files.dliu.com/dliu.com/ui/']) {
+    expect(CONTENT_SECURITY_POLICY).toContain(directive);
+  }
+  expect(CONTENT_SECURITY_POLICY).not.toContain('unsafe');
+  const distribution = Object.values(template.findResources('AWS::CloudFront::Distribution'))[0] as any;
+  const config = distribution.Properties.DistributionConfig;
+  const api = config.CacheBehaviors.find((behavior: any) => behavior.PathPattern === 'api/*');
+  expect(api.ResponseHeadersPolicyId).toEqual(config.DefaultCacheBehavior.ResponseHeadersPolicyId);
+});
+
+test('a request flood cannot take more than 10 of the account\'s Lambda runs', () => {
+  template.hasResourceProperties('AWS::Lambda::Function', { ReservedConcurrentExecutions: 10 });
 });
 
 function cloudfrontNoCache() {

@@ -14,11 +14,10 @@ if [[ -z "$SITE_BUCKET_NAME" || "$SITE_BUCKET_NAME" == "None" || -z "$DISTRIBUTI
   exit 1
 fi
 
-node --check "$PROJECT_DIR/src/app.js"
-node --check "$PROJECT_DIR/src/engine.js"
+for script in engine.js i18n.js agent-tools.js diagram.js docs.js app.js; do node --check "$PROJECT_DIR/src/$script"; done
 # Upload dependencies first and the entrypoint last. Scripts, the stylesheet and the logo are held at the edge for a day
 # (the invalidation below refreshes them on publish); HTML pages are always revalidated.
-for filename in engine.js agent-tools.js app.js styles.css favicon.svg 404.html; do
+for filename in engine.js i18n.js agent-tools.js diagram.js docs.js app.js styles.css favicon.svg 404.html; do
   cache='public, max-age=300, s-maxage=86400, stale-while-revalidate=86400'
   case "$filename" in
     *.js) mime='text/javascript; charset=utf-8' ;;
@@ -28,6 +27,8 @@ for filename in engine.js agent-tools.js app.js styles.css favicon.svg 404.html;
   esac
   aws s3 cp "$PROJECT_DIR/src/$filename" "s3://$SITE_BUCKET_NAME/$filename" --content-type "$mime" --cache-control "$cache" --only-show-errors
 done
+# /docs is the docs page itself, stored under that key, so it needs no URL rewriting at the edge.
+aws s3 cp "$PROJECT_DIR/src/docs.html" "s3://$SITE_BUCKET_NAME/docs" --content-type 'text/html; charset=utf-8' --cache-control 'no-cache, max-age=0, must-revalidate' --only-show-errors
 aws s3 cp "$PROJECT_DIR/src/index.html" "s3://$SITE_BUCKET_NAME/index.html" --content-type 'text/html; charset=utf-8' --cache-control 'no-cache, max-age=0, must-revalidate' --only-show-errors
 INVALIDATION_ID="$(aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths '/*' --query 'Invalidation.Id' --output text)"
 aws cloudfront wait invalidation-completed --distribution-id "$DISTRIBUTION_ID" --id "$INVALIDATION_ID"

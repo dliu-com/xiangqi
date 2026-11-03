@@ -22,7 +22,8 @@ const server = http.createServer(async (request, response) => {
     } catch (error) { return send(error.statusCode || 500, { message: error.message, ...(error.statusCode === 409 ? { state } : {}) }); }
   }
   try {
-    const filename = path.resolve(root, '.' + decodeURIComponent(pathname === '/' ? '/index.html' : pathname));
+    const pages = { '/': '/index.html', '/docs': '/docs.html' };
+    const filename = path.resolve(root, '.' + decodeURIComponent(pages[pathname] || pathname));
     if (!filename.startsWith(root + path.sep) && filename !== root) throw new Error('Invalid path');
     const data = await readFile(filename);
     response.writeHead(200, { 'content-type': types[path.extname(filename)] || 'application/octet-stream', 'cache-control': 'no-store' });

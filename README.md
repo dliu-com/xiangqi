@@ -1,6 +1,6 @@
 # 中国象棋 — Xiangqi
 
-A Chinese-language Xiangqi app at **https://xiangqi.dliu.com**. Source: https://github.com/dliu-com/xiangqi. Two people share one board, with legal-move guidance, check/checkmate/stalemate detection, move history, captures, undo, board flipping, draw, and resignation.
+A Xiangqi app at **https://xiangqi.dliu.com**, in Chinese by default with an English switch. Source: https://github.com/dliu-com/xiangqi. How it works, what it costs and its security review are at **https://xiangqi.dliu.com/docs**. Two people share one board, with legal-move guidance, check/checkmate/stalemate detection, move history, captures, undo, board flipping, draw, and resignation.
 
 Check shows a prominent “将军！” banner and marks the threatened general on the board. Checkmate shows “绝杀 · 红方已输” or “绝杀 · 黑方已输”, names the winner, and stops further moves; undo and a new game remain available. These notices also appear when restoring or automatically syncing a game.
 
@@ -19,17 +19,36 @@ The viewing mode, chosen side, and shared-device seating orientation are saved o
 
 Like every dliu.com site, the pages use the shared UI kit described at https://files.dliu.com/dliu.com/README.md:
 
-- `index.html` and `404.html` load `https://files.dliu.com/dliu.com/ui/v1/dl.css` before `/styles.css`. Both use the shared `dl-header`, `dl-main` and `dl-footer` markup. The header's `dl-brand` link to `/` shows xiangqi's own logo, a white 象 on the DL blue `#209cee` (`src/favicon.svg`, also the favicon) and “中国象棋”, with “行棋规则” in `dl-nav`. The footer starts with the shared DL logo (`dl-footer-logo`, `https://files.dliu.com/dliu.com/favicon.png`) linking to dliu.com. The site follows the light theme only.
+- `index.html`, `docs.html` and `404.html` load `https://files.dliu.com/dliu.com/ui/v1/dl.css` before `/styles.css` (the docs page also loads `dl-docs.css` between them). All use the shared `dl-header`, `dl-main` and `dl-footer` markup. The header's `dl-brand` link to `/` shows xiangqi's own logo, a white 象 on the DL blue `#209cee` (`src/favicon.svg`, also the favicon) and “中国象棋” (“Xiangqi”). `dl-nav` holds, in order, the `Docs` button (文档), “行棋规则” (Rules, board page only) and the shared `dl-language` switcher last. The footer starts with the shared DL logo (`dl-footer-logo`, `https://files.dliu.com/dliu.com/favicon.png`) linking to dliu.com, then `dliu.com · … · Docs`; the board and docs pages keep the WXF rules link. The site follows the light theme only.
 - Buttons are `dl-button`, with `dl-button-primary`, `dl-button-danger` and `dl-button-link` variants. 同一设备/不同设备 and 红方/黑方 are `dl-segmented` groups marked with `aria-pressed`. The rules and confirmation dialogs are native `<dialog class="dl-dialog">` elements with `dl-dialog-head`, `dl-dialog-body` and `dl-dialog-actions`.
 - `src/styles.css` keeps only app-specific rules on the shared `--dl-*` variables: the board and pieces, which keep their own wood-and-ivory design, plus player bars, notices, move history, the toolbar, fullscreen and rule rows. It defines no header, button, dialog, footer or palette styles. The shared files are never copied into this site, and no shared JavaScript is used.
-- There is no Content-Security-Policy header, so none needs changing.
-- `tests/shared-ui.test.js` guards these rules. Check the live site with `node ../shared-resources/scripts/audit.mjs xiangqi.dliu.com`.
+- The Content-Security-Policy allows styles only from `https://files.dliu.com/dliu.com/ui/` and images only from `https://files.dliu.com/dliu.com/` besides the site itself (see Security below).
+- `tests/shared-ui.test.js` guards these rules, the Docs links, the language switcher, and an English version for every Chinese text in the static pages. Check the live site with `node ../shared-resources/scripts/audit.mjs xiangqi.dliu.com`.
+
+## Languages
+
+Chinese is the default. The header's 中文 | English switcher (a 文/A button on narrow screens) changes the language in place, without reloading, and saves the choice in this browser's local storage as `xiangqi-language`; later visits use it. `src/i18n.js` holds the switcher, `t('中文', 'English')`, English piece names and rules, and English versions of the API's Chinese error messages. Static pages are written in Chinese with `data-en` (text), `data-en-label` (aria-label) and `data-en-content` (meta) attributes; `app.js` and `docs.js` redraw their own content on the `xiangqi-language-change` event. Piece characters and the river label stay in Chinese in both languages.
+
+## Docs
+
+`/docs` is `src/docs.html`, uploaded to the S3 key `docs` (no URL rewriting at the edge), with tabs for **Technical architecture**, **Cost** and **Security**. `src/docs.js` builds the tabs in both languages with `src/diagram.js`, the shared diagram kit (from traffic-monitor, as used by video). There is no API tab: the game API is internal to the page. Update the docs when the architecture, prices or security controls change.
+
+## Security
+
+Threat-modelled and penetration-tested against the live site on 3 November 2026; the Security tab of `/docs` lists every test, the threat model and the accepted risks. The tests led to these fixes:
+
+- A strict Content-Security-Policy (`script-src 'self'`, no inline code, `frame-ancestors 'none'`) and a Permissions-Policy, on the pages and on `/api/game`. The API now gets the same security headers as the pages.
+- CloudFront removes S3's `server`, `x-amz-version-id` and `x-amz-server-side-encryption` headers.
+- The Lambda's reserved concurrency is 10, so a request flood cannot take the Lambda concurrency the account's other sites share.
+- The browser checks every piece in a server response (known sides and piece types only) before drawing it.
+
+Accepted by design: anyone can change the one shared game (there are no accounts), there is no WAF or rate limit, and the game has no backup.
 
 ## Project structure
 
 The structure follows the other dliu.com applications:
 
-- `src/`: HTML, CSS, and browser JavaScript, uploaded directly to S3. No frontend build or runtime dependencies.
+- `src/`: HTML, CSS, and browser JavaScript, uploaded directly to S3. No frontend build or runtime dependencies. `i18n.js` is the language switcher; `docs.html`, `docs.js` and `diagram.js` are the docs page.
 - `backend/`: authoritative game actions and the Lambda GET/POST handler. The server reuses the browser's move engine.
 - `cdk/bin/cdk.ts`: CDK entrypoint for the `XiangqiSite` stack.
 - `cdk/lib/xiangqi-site-stack.ts`: S3, CloudFront, DynamoDB, Lambda, certificate, and DNS resources.
@@ -48,8 +67,8 @@ The DynamoDB on-demand table stores a single item, `gameId=current`, with the co
 
 ## Edge caching and clearing
 
-- **Cached at the edge for up to 1 day:** `app.js`, `engine.js`, `agent-tools.js`, `styles.css`, and `favicon.svg`. The shared `dl.css` and DL logo are served and cached by files.dliu.com. `scripts/publish-site.sh` uploads them with `public, max-age=300, s-maxage=86400, stale-while-revalidate=86400`. The static cache policy's maximum TTL is also 1 day.
-- **Always revalidated:** `index.html` (`no-cache, max-age=0, must-revalidate`) and `404.html` (`max-age=0, must-revalidate`). CloudFront keeps error responses for 30 seconds.
+- **Cached at the edge for up to 1 day:** `app.js`, `engine.js`, `i18n.js`, `agent-tools.js`, `docs.js`, `diagram.js`, `styles.css`, and `favicon.svg`. The shared `dl.css` and DL logo are served and cached by files.dliu.com. `scripts/publish-site.sh` uploads them with `public, max-age=300, s-maxage=86400, stale-while-revalidate=86400`. The static cache policy's maximum TTL is also 1 day.
+- **Always revalidated:** `index.html` and `docs` (`no-cache, max-age=0, must-revalidate`) and `404.html` (`max-age=0, must-revalidate`). CloudFront keeps error responses for 30 seconds.
 - **Never cached:** `/api/game` uses the `CachingDisabled` policy and returns `no-store`. The game state is in DynamoDB, not S3.
 - **How changes are cleared:** files change only through `scripts/publish-site.sh`, which `make deploy`, `make publish`, GitHub Actions, and Jenkins all use. Each publish invalidates `/*` and waits until it completes.
 - **No automatic clearing:** there is no S3 → EventBridge → Lambda → CloudFront invalidation. Nothing else writes to the bucket, so the publish invalidation already covers every change. Automatic clearing would also add a second invalidation for each file on every publish. If anything starts writing edge-cached files to this bucket outside the publish script, add automatic clearing for those keys. HTML doesn't need it because it is always revalidated.
@@ -58,7 +77,7 @@ The DynamoDB on-demand table stores a single item, `gameId=current`, with the co
 
 - CloudFront uses pay-as-you-go service pricing.
 - DynamoDB uses `PAY_PER_REQUEST`, with no provisioned capacity or paid point-in-time recovery.
-- Lambda has no provisioned concurrency, keep-alive schedule, VPC, or NAT gateway.
+- Lambda has no provisioned concurrency, keep-alive schedule, VPC, or NAT gateway. Its reserved concurrency of 10 costs nothing.
 - No load balancer, always-on server, API Gateway, or additional DNS hosted zone is created.
 - Game API logs expire after one week. S3 files and the saved game incur storage charges.
 - The browser reads every 5 seconds while the page is open, as well as on initial load, focus, visibility return, reconnection, or explicit retry; it saves on game actions. Checks are skipped while another read or save is in progress. Browsers may slow timers in background tabs; returning to the page triggers an immediate check.
@@ -99,4 +118,4 @@ Before saving each move, the browser fetches the latest game with an uncached GE
 
 Moves are acknowledged only after a successful save. An uncertain save request is followed by a fresh read. The board can be flipped locally without changing the shared game.
 
-This is a casual-play ruleset. Perpetual checking/chasing, repetitions, and move-limit adjudication are left to the players; the Chinese rules dialog explains this. Up to 2,000 moves are retained per game to stay safely within DynamoDB's item-size limit.
+This is a casual-play ruleset. Perpetual checking/chasing, repetitions, and move-limit adjudication are left to the players; the rules dialog explains this. Up to 2,000 moves are retained per game to stay safely within DynamoDB's item-size limit.
