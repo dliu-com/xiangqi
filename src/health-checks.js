@@ -1,4 +1,4 @@
-// The single source for how a guest tests xiangqi.dliu.com: /docs/health (people), /docs/health.md (machines),
+// The single source for how a guest tests xiangqi.dliu.com: /docs#health (people), /docs/health.md (machines),
 // scripts/guest-checks.mjs (runs them) and tests/health.test.js (keeps them in sync with backend/handler.cjs).
 export const SITE = 'https://xiangqi.dliu.com';
 
@@ -14,7 +14,7 @@ export const FUNCTIONS = [
     key: 'docs', name: 'Docs', critical: false,
     zh: '说明文档能否打开。', en: 'The documentation pages load.',
     downZh: '只是说明文档打不开，下棋不受影响。', downEn: 'Only the documentation is missing; playing is unaffected.',
-    detail: '/docs (architecture, cost, security), /docs/health and /docs/health.md, served from S3.',
+    detail: '/docs (tabs: architecture, cost, security, testing at /docs#health) and /docs/health.md, served from S3; /docs/health redirects to /docs#health.',
   },
   {
     key: 'game', name: 'Shared game', critical: true,
@@ -53,8 +53,8 @@ export const CHECKS = [
   { fn: 'pages', method: 'GET', url: `${SITE}/app.js`, status: 200, type: 'text/javascript', marker: 'registerGameTools', slowMs: 2000 },
   { fn: 'pages', method: 'GET', url: `${SITE}/styles.css`, status: 200, type: 'text/css', marker: '.board', slowMs: 2000 },
   { fn: 'pages', method: 'GET', url: `${SITE}/no-such-page`, status: 404, type: 'text/html', marker: 'dl-header' },
-  { fn: 'docs', method: 'GET', url: `${SITE}/docs`, status: 200, type: 'text/html', marker: 'dl-tabs', slowMs: 2000 },
-  { fn: 'docs', method: 'GET', url: `${SITE}/docs/health`, status: 200, type: 'text/html', marker: 'id="health"', slowMs: 2000 },
+  { fn: 'docs', method: 'GET', url: `${SITE}/docs`, status: 200, type: 'text/html', marker: 'id="health"', slowMs: 2000 },
+  { fn: 'docs', method: 'GET', url: `${SITE}/docs/health`, status: 301, location: '/docs#health' },
   { fn: 'docs', method: 'GET', url: `${SITE}/docs/health.md`, status: 200, type: 'text/markdown', marker: '# DL 中国象棋 (xiangqi.dliu.com): guest testing', slowMs: 2000 },
   { fn: 'game', method: 'GET', url: `${SITE}/api/game`, status: 200, type: 'application/json', marker: 'state', json: true, slowMs: 3000 },
   { fn: 'rules', method: 'GET', url: `${SITE}/engine.js`, status: 200, type: 'text/javascript', marker: 'allLegalMoves', slowMs: 2000 },

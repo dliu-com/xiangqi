@@ -59,7 +59,7 @@ out="$(echo | openssl s_client -connect "$HOST:443" -servername "$HOST" -tls1_2 
 check 'Weak ciphers (RC4, 3DES, NULL, EXPORT, MD5)' refused "$(echo "$out" | grep -q 'Cipher is (NONE)\|alert\|no cipher\|errno' && echo refused || echo accepted)" "$(echo "$out" | grep -q 'Cipher is (NONE)\|alert\|no cipher\|errno' && echo 1 || echo 0)"
 
 # Security headers
-for path in / /docs /docs/health /api/game /health /no-such-page; do
+for path in / /docs /docs/health.md /api/game /health /no-such-page; do
   h="$(curl -s -o /dev/null -D - "$SITE$path" | tr -d '\r')"
   ok=1
   for expected in "content-security-policy: $CSP" 'strict-transport-security: max-age=31536000' 'x-frame-options: DENY' 'x-content-type-options: nosniff' 'referrer-policy: strict-origin-when-cross-origin' 'permissions-policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()'; do
@@ -100,6 +100,9 @@ leak="$(grep -oE 'arn:|XiangqiSite|GameState|amazonaws|Table|revision' "$TMP/hea
 check '/health reveals nothing private' 'no names, ARNs or game data' "${leak:-none}" "$([[ -z $leak ]] && echo 1 || echo 0)"
 c="$(code -X POST -H "$json" --data '{}' "$SITE/health")"; check 'POST /health' 'refused (not 2xx)' "$c" "$(matches "$c" '^[^2]')"
 c="$(code -X DELETE "$SITE/health")"; check 'DELETE /health' 'refused (not 2xx)' "$c" "$(matches "$c" '^[^2]')"
+
+h="$(curl -s -o /dev/null -D - "$SITE/docs/health" | tr -d '\r')"
+check '/docs/health redirects to the Testing tab' '301, Location /docs#health' "$(head -1 <<<"$h" | cut -d' ' -f2) $(grep -i '^location' <<<"$h" | cut -d' ' -f2)" "$(matches "$h" ' 301 .*[Ll]ocation: /docs#health')"
 
 # Bypassing CloudFront
 c="$(code "${FUNCTION_URL}api/game")"; check 'Lambda function URL called directly' 403 "$c" "$(is "$c" 403)"

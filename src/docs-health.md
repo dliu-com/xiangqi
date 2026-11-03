@@ -1,7 +1,7 @@
 # DL 中国象棋 (xiangqi.dliu.com): guest testing
 
-How to test https://xiangqi.dliu.com as an anonymous guest, for machines and AI agents. This is the full technical version of
-https://xiangqi.dliu.com/docs/health and is generated from the same data (src/health-checks.js in dliu-com/xiangqi). It follows the
+How to test https://xiangqi.dliu.com as an anonymous guest, for machines and AI agents. This is the full technical version of the
+Testing tab at https://xiangqi.dliu.com/docs#health and is generated from the same data (src/health-checks.js in dliu-com/xiangqi). It follows the
 dliu.com health contract used by status.dliu.com.
 
 ## Rules
@@ -19,7 +19,7 @@ A function is critical when the site counts as down without it.
 | Key | Name | Critical | What it does | Implementation |
 | --- | --- | --- | --- | --- |
 | `pages` | Pages | yes | The board page, its styles and scripts load. | index.html, app.js, engine.js, styles.css and 404.html, served by CloudFront from a private S3 bucket. |
-| `docs` | Docs | no | The documentation pages load. | /docs (architecture, cost, security), /docs/health and /docs/health.md, served from S3. |
+| `docs` | Docs | no | The documentation pages load. | /docs (tabs: architecture, cost, security, testing at /docs#health) and /docs/health.md, served from S3; /docs/health redirects to /docs#health. |
 | `game` | Shared game | yes | The shared game can be read. | GET /api/game: CloudFront → Lambda function URL (IAM-signed) → DynamoDB GetItem of the single item gameId=current. |
 | `rules` | Move rules | yes | The move rules on the server work. | src/engine.js, the same file in the browser and in the Lambda; /health checks it finds Red’s 44 legal opening moves. |
 
@@ -37,8 +37,8 @@ the content type without its parameters (for example `; charset=utf-8`).
 | pages | GET | https://xiangqi.dliu.com/app.js | 200 | `text/javascript` | Marker `registerGameTools` | 2000 ms |
 | pages | GET | https://xiangqi.dliu.com/styles.css | 200 | `text/css` | Marker `.board` | 2000 ms |
 | pages | GET | https://xiangqi.dliu.com/no-such-page | 404 | `text/html` | Marker `dl-header` | — |
-| docs | GET | https://xiangqi.dliu.com/docs | 200 | `text/html` | Marker `dl-tabs` | 2000 ms |
-| docs | GET | https://xiangqi.dliu.com/docs/health | 200 | `text/html` | Marker `id="health"` | 2000 ms |
+| docs | GET | https://xiangqi.dliu.com/docs | 200 | `text/html` | Marker `id="health"` | 2000 ms |
+| docs | GET | https://xiangqi.dliu.com/docs/health | 301 | — | Location `/docs#health` | — |
 | docs | GET | https://xiangqi.dliu.com/docs/health.md | 200 | `text/markdown` | Marker `# DL 中国象棋 (xiangqi.dliu.com): guest testing` | 2000 ms |
 | game | GET | https://xiangqi.dliu.com/api/game | 200 | `application/json` | JSON key `state` | 3000 ms |
 | rules | GET | https://xiangqi.dliu.com/engine.js | 200 | `text/javascript` | Marker `allLegalMoves` | 2000 ms |

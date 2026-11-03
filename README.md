@@ -31,17 +31,17 @@ Chinese is the default. The header's 中文 | English switcher (a 文/A button o
 
 ## Docs
 
-`/docs` is `src/docs.html`, uploaded to the S3 key `docs` (no URL rewriting at the edge), with tabs for **Technical architecture**, **Cost** and **Security**. `src/docs.js` builds the tabs in both languages with `src/diagram.js`, the shared diagram kit (from traffic-monitor, as used by video). There is no API tab: the game API is internal to the page. Update the docs when the architecture, prices or security controls change.
+`/docs` is `src/docs.html`, uploaded to the S3 key `docs` (no URL rewriting at the edge), with tabs for **Technical architecture**, **Cost**, **Security** and **Testing** (`#health`, see "Health checks" below). `src/docs.js` builds the tabs in both languages with `src/diagram.js`, the shared diagram kit (from traffic-monitor, as used by video). There is no API tab: the game API is internal to the page. Update the docs when the architecture, prices or security controls change.
 
 ## Health checks for status.dliu.com
 
 The site follows the dliu.com health contract (`status/HEALTH.md`) so status.dliu.com can test it as an anonymous guest, every 15 minutes, without changing the shared game:
 
-- **`/docs/health`** (`src/docs-health.html` + `src/docs-health.js`, uploaded to the S3 key `docs/health`): for people. A diagram of how the site is tested, one plain line per function, what isn't tested, and the technical details folded in closed `<details>` blocks, with a link to the Markdown version.
+- **`/docs#health`**, the **Testing** tab of the docs page (`src/docs-health.js`, built by `src/docs.js` like the other tabs): for people. A diagram of how the site is tested, one plain line per function, what isn't tested, and the technical details folded in closed `<details>` blocks, with a link to the Markdown version. The old `/docs/health` address answers `301` with `Location: /docs#health` (a CloudFront Function on the exact `docs/health` behavior; `/docs/health.md` is unaffected).
 - **`/docs/health.md`** (`src/docs-health.md`, served as `text/markdown; charset=utf-8`): the full technical version for machines and AI agents: functions, every guest check (method, URL, status, content type, marker, slow threshold), the `/health` format and checks, and what isn't tested.
 - Both are built from **`src/health-checks.js`**. After changing it, run `make health-md` to regenerate the Markdown (`scripts/publish-site.sh` also does). `make guest-check` runs every guest check against the live site (`scripts/guest-checks.mjs`).
 - **`GET /health`** (also `HEAD`): handled first by the game Lambda, before it reads anything from the request. It runs `game` (one eventually consistent DynamoDB `GetItem` of the game's revision, 2 s timeout, `warn` over 1 s) and `rules` (the engine finds Red's 44 legal opening moves, CPU only). It returns `application/health+json` with `200` for pass/warn and `503` for fail, and no private details. CloudFront's `health` behavior allows only GET/HEAD, has no origin request policy (no cookies, `Authorization` header or query string reach the Lambda) and a cache policy keyed on nothing with a 60 s TTL.
-- `tests/health.test.js` fails if either page or the endpoint disappears, if `/health` reads the request, writes or leaks details, or if the function keys in the handler, the page, the Markdown and `src/health-checks.js` drift apart. The CDK test checks the `health` behavior.
+- `tests/health.test.js` fails if the Testing tab, the Markdown, the redirect or the endpoint disappears, if `/health` reads the request, writes or leaks details, or if the function keys in the handler, the page, the Markdown and `src/health-checks.js` drift apart. The CDK tests check the `health` behavior and the `docs/health` redirect.
 
 ## Security
 
@@ -50,7 +50,7 @@ Threat-modelled (assets, actors, trust boundaries, data flows, STRIDE per compon
 Rerun the live tests at any time:
 
 ```sh
-make security-test   # scripts/security-test.sh: 103 non-destructive checks; exits 1 if any fails
+make security-test   # scripts/security-test.sh: 104 non-destructive checks; exits 1 if any fails
 ```
 
 The script needs curl, openssl, node and read access to this stack's outputs through the AWS CLI. Its writes use only stale revisions or impossible actions, and it checks that the game's revision is unchanged at the end (a real player moving during the run would trip that last check).

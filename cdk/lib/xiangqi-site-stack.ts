@@ -23,6 +23,14 @@ import {
 // Every log group in the account keeps its logs for 3 months.
 export const LOG_RETENTION = logs.RetentionDays.THREE_MONTHS;
 
+export const DOCS_HEALTH_REDIRECT = `function handler() {
+  return {
+    statusCode: 301,
+    statusDescription: 'Moved Permanently',
+    headers: { location: { value: '/docs#health' }, 'cache-control': { value: 'public, max-age=86400' } },
+  };
+}`;
+
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self'",
@@ -136,7 +144,14 @@ export class XiangqiSiteStack extends Stack {
     const trafficGeoPolicy = cloudfront.OriginRequestPolicy.fromOriginRequestPolicyId(
       this, 'TrafficGeo', Fn.importValue('TrafficGeoOriginRequestPolicyId'));
 
+    const siteOrigin = origins.S3BucketOrigin.withOriginAccessControl(bucket);
     const apiOrigin = origins.FunctionUrlOrigin.withOriginAccessControl(functionUrl);
+    // The testing page moved into the docs page's Testing tab; the old address points there.
+    const docsHealthRedirect = new cloudfront.Function(this, 'DocsHealthRedirect', {
+      runtime: cloudfront.FunctionRuntime.JS_2_0,
+      comment: 'Redirects /docs/health to /docs#health',
+      code: cloudfront.FunctionCode.fromInline(DOCS_HEALTH_REDIRECT),
+    });
     // /health for status.dliu.com: keyed on nothing and kept 60 s, so the Lambda runs at most about once a minute
     // per edge location. With no origin request policy, no cookies, Authorization header or query string reach it.
     const healthCachePolicy = new cloudfront.CachePolicy(this, 'HealthCachePolicy', {
@@ -150,7 +165,7 @@ export class XiangqiSiteStack extends Stack {
 
     const distribution = new cloudfront.Distribution(this, 'SiteDistribution', {
       defaultBehavior: {
-        origin: origins.S3BucketOrigin.withOriginAccessControl(bucket),
+        origin: siteOrigin,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
         cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
@@ -168,6 +183,14 @@ export class XiangqiSiteStack extends Stack {
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
           responseHeadersPolicy: headers,
+        },
+        'docs/health': {
+          origin: siteOrigin,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy,
+          responseHeadersPolicy: headers,
+          functionAssociations: [{ eventType: cloudfront.FunctionEventType.VIEWER_REQUEST, function: docsHealthRedirect }],
         },
         health: {
           origin: apiOrigin,

@@ -94,7 +94,7 @@ test('/health accepts only GET and HEAD', async () => {
   assert.equal(sent.length, 0);
 });
 
-test('the endpoint, /docs/health, /docs/health.md and the check list use the same function keys', () => {
+test('the endpoint, /docs#health, /docs/health.md and the check list use the same function keys', () => {
   const handler = read('backend/handler.cjs');
   const handlerFunctions = [...handler.matchAll(/\{ key: '(\w+)', name: '([^']+)' \}/g)].map(([, key, name]) => ({ key, name }));
   assert.deepEqual(handlerFunctions, HEALTH_FUNCTIONS.map(({ key, name }) => ({ key, name })));
@@ -118,29 +118,36 @@ test('/docs/health.md is the generated, full technical version', () => {
   }
 });
 
-test('/docs/health is a people-first docs page: a diagram, plain lines and folded technical details', () => {
-  const page = read('src/docs-health.html');
-  assert.ok(page.includes('<link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl-docs.css">'));
-  assert.ok(page.includes('<nav class="dl-tabs"'));
-  assert.ok(page.includes('<a href="/docs/health" aria-current="page" data-en="Health">健康检查</a>'));
-  assert.ok(page.includes('<article id="health" class="dl-docs">'));
-  assert.ok(page.includes('<script type="module" src="/docs-health.js"></script>'));
-  assert.ok(read('src/docs.html').includes('<a href="/docs/health" data-en="Health">健康检查</a>'));
+test('the Testing tab (/docs#health) is people-first: a diagram, plain lines and folded technical details', () => {
+  const page = read('src/docs.html');
+  assert.ok(page.includes('<a href="/docs#health" data-tab="health" data-en="Testing">测试</a>'));
+  assert.ok(page.includes('<article id="health" class="dl-docs" hidden>'));
+  const docs = read('src/docs.js');
+  assert.ok(docs.includes("import { health } from './docs-health.js';"));
+  assert.ok(docs.includes("const TABS = ['architecture', 'cost', 'security', 'health'];"));
+  assert.ok(docs.includes('const BUILDERS = { architecture, cost, security, health };'));
   const script = read('src/docs-health.js');
+  assert.match(script, /export function health\(root\)/);
   assert.match(script, /flow\(\{/);
   for (const tone of ['good', 'warn', 'bad']) assert.ok(script.includes(`tone: '${tone}'`), tone);
   assert.equal((script.match(/root\.append\(more\(/g) || []).length, 3);
   assert.ok(script.includes("link.href = '/docs/health.md'"));
   assert.ok(script.includes('Full technical version (Markdown)'));
   // The technical tables and JSON appear only inside the folded blocks.
-  const beforeDetails = script.slice(script.indexOf('function build'), script.indexOf("add('h2', t('技术细节'"));
+  const beforeDetails = script.slice(script.indexOf('export function health'), script.indexOf("add('h2', t('技术细节'"));
   assert.doesNotMatch(beforeDetails, /CHECKS|HEALTH_EXAMPLE|application\/|code\(/);
+});
+
+test('/docs/health is a redirect, not a page', () => {
+  assert.ok(CHECKS.some(check => check.url === `${SITE}/docs/health` && check.status === 301 && check.location === '/docs#health'));
+  assert.ok(!read('scripts/publish-site.sh').includes('docs-health.html'));
+  assert.throws(() => read('src/docs-health.html'));
 });
 
 test('every guest-check marker is in the file S3 serves, and both docs pages are published', () => {
   const files = {
     '/': 'src/index.html', '/app.js': 'src/app.js', '/styles.css': 'src/styles.css', '/no-such-page': 'src/404.html',
-    '/docs': 'src/docs.html', '/docs/health': 'src/docs-health.html', '/docs/health.md': 'src/docs-health.md', '/engine.js': 'src/engine.js',
+    '/docs': 'src/docs.html', '/docs/health.md': 'src/docs-health.md', '/engine.js': 'src/engine.js',
   };
   for (const check of CHECKS) {
     if (!check.marker || check.json) continue;
@@ -149,6 +156,5 @@ test('every guest-check marker is in the file S3 serves, and both docs pages are
     assert.ok(read(file).includes(check.marker), `${check.url}: ${check.marker}`);
   }
   const publish = read('scripts/publish-site.sh');
-  assert.ok(publish.includes(`src/docs-health.html" "s3://$SITE_BUCKET_NAME/docs/health" --content-type 'text/html; charset=utf-8'`));
   assert.ok(publish.includes(`src/docs-health.md" "s3://$SITE_BUCKET_NAME/docs/health.md" --content-type 'text/markdown; charset=utf-8'`));
 });

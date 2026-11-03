@@ -6,7 +6,7 @@ const read = file => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8'
 const DL_CSS = '<link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl.css">';
 const DL_ICON = 'https://files.dliu.com/dliu.com/favicon.png';
 const DOCS_CSS = '<link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl-docs.css">';
-const PAGES = ['src/index.html', 'src/404.html', 'src/docs.html', 'src/docs-health.html'];
+const PAGES = ['src/index.html', 'src/404.html', 'src/docs.html'];
 const LANGUAGE_SWITCHER = `<div class="dl-language">
         <button type="button" class="dl-button dl-language-toggle" aria-controls="dl-languages" aria-expanded="false" aria-label="Language / 语言">文/A</button>
         <div id="dl-languages" class="dl-languages" role="group" aria-label="Language / 语言">
@@ -43,7 +43,7 @@ test('every page has Docs in the menu bar and the Chinese/English switcher last'
     const nav = page.slice(page.indexOf('<nav class="dl-nav"'), page.indexOf('</nav>') + 6);
     assert.match(nav, /<a class="dl-button" href="\/docs"( aria-current="page")? data-en="Docs">文档<\/a>/, file);
     assert.ok(nav.endsWith(LANGUAGE_SWITCHER), file);
-    assert.match(page, /<script type="module" src="\/(app|i18n|docs|docs-health)\.js"><\/script>/, file);
+    assert.match(page, /<script type="module" src="\/(app|i18n|docs)\.js"><\/script>/, file);
   }
 });
 
@@ -52,7 +52,7 @@ test('the docs page uses the shared docs look, with architecture, cost and secur
   assert.ok(page.indexOf(DL_CSS) < page.indexOf(DOCS_CSS) && page.indexOf(DOCS_CSS) < page.indexOf('/styles.css'));
   assert.ok(page.includes('<main class="dl-main dl-docs-main">'));
   assert.ok(page.includes('<nav class="dl-tabs"'));
-  for (const tab of ['architecture', 'cost', 'security']) {
+  for (const tab of ['architecture', 'cost', 'security', 'health']) {
     assert.ok(page.includes(`href="/docs#${tab}" data-tab="${tab}"`), tab);
     assert.ok(page.includes(`<article id="${tab}" class="dl-docs"`), tab);
   }

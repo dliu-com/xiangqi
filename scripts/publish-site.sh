@@ -30,7 +30,6 @@ for filename in engine.js i18n.js agent-tools.js diagram.js health-checks.js doc
 done
 # /docs is the docs page itself, stored under that key, so it needs no URL rewriting at the edge.
 aws s3 cp "$PROJECT_DIR/src/docs.html" "s3://$SITE_BUCKET_NAME/docs" --content-type 'text/html; charset=utf-8' --cache-control 'no-cache, max-age=0, must-revalidate' --only-show-errors
-aws s3 cp "$PROJECT_DIR/src/docs-health.html" "s3://$SITE_BUCKET_NAME/docs/health" --content-type 'text/html; charset=utf-8' --cache-control 'no-cache, max-age=0, must-revalidate' --only-show-errors
 aws s3 cp "$PROJECT_DIR/src/docs-health.md" "s3://$SITE_BUCKET_NAME/docs/health.md" --content-type 'text/markdown; charset=utf-8' --cache-control 'no-cache, max-age=0, must-revalidate' --only-show-errors
 aws s3 cp "$PROJECT_DIR/src/index.html" "s3://$SITE_BUCKET_NAME/index.html" --content-type 'text/html; charset=utf-8' --cache-control 'no-cache, max-age=0, must-revalidate' --only-show-errors
 INVALIDATION_ID="$(aws cloudfront create-invalidation --distribution-id "$DISTRIBUTION_ID" --paths '/*' --query 'Invalidation.Id' --output text)"

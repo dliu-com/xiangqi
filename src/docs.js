@@ -1,8 +1,9 @@
 import { t, LANGUAGE_EVENT } from './i18n.js';
 import { flow, tiers, stats, table, callout, more } from './diagram.js';
+import { health } from './docs-health.js';
 
-const TABS = ['architecture', 'cost', 'security'];
-const TITLES = { architecture: ['技术架构', 'Technical architecture'], cost: ['运行成本', 'Cost'], security: ['安全', 'Security'] };
+const TABS = ['architecture', 'cost', 'security', 'health'];
+const TITLES = { architecture: ['技术架构', 'Technical architecture'], cost: ['运行成本', 'Cost'], security: ['安全', 'Security'], health: ['测试', 'Testing'] };
 const num = text => ({ text, className: 'num' });
 const mono = text => ({ text, className: 'mono' });
 
@@ -193,8 +194,8 @@ function security(root) {
 
   add('p', t('任何人都可以下这盘共享的棋，所以要保护的不是“谁能下”，而是：只能保存合法的棋、不能绕过 CloudFront、不能注入脚本、不能读到或改到别的东西，以及费用不能失控。',
     'Anyone may play the shared game, so the job is not to decide who may play, but to make sure that only legal moves are saved, nothing bypasses CloudFront, no script can be injected, nothing else can be read or changed, and the bill cannot run away.'), 'lead');
-  root.append(callout('shield', t(`${TEST_DATE} 完成威胁建模、代码审查和三轮线上渗透测试（修复前、修复后、再次加固后）。所有中高风险问题均已修复或由你决定；最新一轮 103 项检查全部通过。任何人都可以用 make security-test 重新运行这些测试，它不会改动棋局。`,
-    `Threat-modelled, code-reviewed and penetration-tested against the live site on ${TEST_DATE}, in three rounds (before fixes, after fixes, after further hardening). Every Medium or higher finding is fixed or waiting on your decision; all 103 checks of the latest round passed. Anyone can rerun them with make security-test, which never changes the game.`)));
+  root.append(callout('shield', t(`${TEST_DATE} 完成威胁建模、代码审查和三轮线上渗透测试（修复前、修复后、再次加固后）。所有中高风险问题均已修复或由你决定；最新一轮 104 项检查全部通过。任何人都可以用 make security-test 重新运行这些测试，它不会改动棋局。`,
+    `Threat-modelled, code-reviewed and penetration-tested against the live site on ${TEST_DATE}, in three rounds (before fixes, after fixes, after further hardening). Every Medium or higher finding is fixed or waiting on your decision; all 104 checks of the latest round passed. Anyone can rerun them with make security-test, which never changes the game.`)));
 
   add('h2', t('要保护的资产', 'Assets'));
   root.append(list([
@@ -306,8 +307,8 @@ function security(root) {
   ]));
 
   add('h2', t('线上渗透测试', 'Live penetration test'));
-  add('p', t(`以下是 ${TEST_DATE} 21:47 UTC 对 https://xiangqi.dliu.com 运行 scripts/security-test.sh（make security-test）的结果（23:11 UTC 加入 /health 后重新运行）：103 项检查，全部通过。脚本用 curl、openssl 和 AWS CLI（只用来查找本堆栈的函数 URL、存储桶和 CloudFront 域名）。写入测试只使用过期的版本号或不可能合法的动作，脚本最后会确认棋局版本号没有变化。`,
-    `Results of scripts/security-test.sh (make security-test) against https://xiangqi.dliu.com on ${TEST_DATE} at 21:47 UTC, rerun at 23:11 UTC after adding /health: 103 checks, all passed. It uses curl, openssl and the AWS CLI (only to look up this stack’s function URL, bucket and CloudFront domain). Write tests use only stale revisions or actions that can never be legal, and the script finally confirms that the game’s revision did not change.`));
+  add('p', t(`以下是 ${TEST_DATE} 21:47 UTC 对 https://xiangqi.dliu.com 运行 scripts/security-test.sh（make security-test）的结果（23:11 UTC 加入 /health、23:50 UTC 加入 /docs/health 跳转后重新运行）：104 项检查，全部通过。脚本用 curl、openssl 和 AWS CLI（只用来查找本堆栈的函数 URL、存储桶和 CloudFront 域名）。写入测试只使用过期的版本号或不可能合法的动作，脚本最后会确认棋局版本号没有变化。`,
+    `Results of scripts/security-test.sh (make security-test) against https://xiangqi.dliu.com on ${TEST_DATE} at 21:47 UTC, rerun after adding /health (23:11 UTC) and the /docs/health redirect (23:50 UTC): 104 checks, all passed. It uses curl, openssl and the AWS CLI (only to look up this stack’s function URL, bucket and CloudFront domain). Write tests use only stale revisions or actions that can never be legal, and the script finally confirms that the game’s revision did not change.`));
   root.append(table([t('测试', 'Test'), t('预期', 'Expected'), t('实际', 'Actual'), t('日期', 'Date'), t('状态', 'Status')], [
     [t('HTTP 降级；http://host//evil.example 开放重定向', 'HTTP downgrade; open redirect via http://host//evil.example'), t('301 到 https://，仍在本站', '301 to https://, staying on this site'), '301 https://xiangqi.dliu.com/ ; https://xiangqi.dliu.com//evil.example/', date, PASS],
     [t('TLS 1.0、1.1 和弱加密套件（RC4、3DES、NULL、EXPORT、MD5）', 'TLS 1.0, 1.1 and weak ciphers (RC4, 3DES, NULL, EXPORT, MD5)'), t('拒绝', 'refused'), t('全部拒绝', 'all refused'), date, PASS],
@@ -429,7 +430,7 @@ function security(root) {
     'Source: dliu-com/xiangqi (cdk/lib/xiangqi-site-stack.ts, backend/, scripts/security-test.sh).'), 'source');
 }
 
-const BUILDERS = { architecture, cost, security };
+const BUILDERS = { architecture, cost, security, health };
 
 function build() {
   for (const id of TABS) {

@@ -1,4 +1,4 @@
-// Writes src/docs-health.md (served as /docs/health.md) from src/health-checks.js, the same data /docs/health shows.
+// Writes src/docs-health.md (served as /docs/health.md) from src/health-checks.js, the same data /docs#health shows.
 // Run `node scripts/health-md.mjs` after changing src/health-checks.js; tests/health.test.js fails if they differ.
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -10,8 +10,8 @@ const row = cells => `| ${cells.map(cell).join(' | ')} |`;
 export function renderHealthMarkdown() {
   return `# DL 中国象棋 (xiangqi.dliu.com): guest testing
 
-How to test ${SITE} as an anonymous guest, for machines and AI agents. This is the full technical version of
-${SITE}/docs/health and is generated from the same data (src/health-checks.js in dliu-com/xiangqi). It follows the
+How to test ${SITE} as an anonymous guest, for machines and AI agents. This is the full technical version of the
+Testing tab at ${SITE}/docs#health and is generated from the same data (src/health-checks.js in dliu-com/xiangqi). It follows the
 dliu.com health contract used by status.dliu.com.
 
 ## Rules

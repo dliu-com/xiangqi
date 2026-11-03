@@ -1,6 +1,6 @@
 import { App } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { CONTENT_SECURITY_POLICY, XiangqiSiteStack } from '../lib/xiangqi-site-stack';
+import { CONTENT_SECURITY_POLICY, DOCS_HEALTH_REDIRECT, XiangqiSiteStack } from '../lib/xiangqi-site-stack';
 
 const template = Template.fromStack(new XiangqiSiteStack(new App(), 'TestXiangqi'));
 
@@ -156,4 +156,18 @@ test('/health is GET/HEAD only, forwards nothing to Lambda and is cached for 60 
   const healthPolicy = policies[health.CachePolicyId.Ref].Properties.CachePolicyConfig;
   expect(healthPolicy.DefaultTTL).toBe(60);
   expect(healthPolicy.ParametersInCacheKeyAndForwardedToOrigin.CookiesConfig.CookieBehavior).toBe('none');
+});
+
+test('the old /docs/health address answers 301 to the Testing tab, and only that exact path', () => {
+  const distribution = Object.values(template.findResources('AWS::CloudFront::Distribution'))[0] as any;
+  const config = distribution.Properties.DistributionConfig;
+  const redirect = config.CacheBehaviors.find((behavior: any) => behavior.PathPattern === 'docs/health');
+  expect(redirect.TargetOriginId).toEqual(config.DefaultCacheBehavior.TargetOriginId);
+  expect(redirect.AllowedMethods).toEqual(['GET', 'HEAD']);
+  expect(redirect.FunctionAssociations).toEqual([expect.objectContaining({ EventType: 'viewer-request' })]);
+  expect(config.CacheBehaviors.some((behavior: any) => behavior.PathPattern.includes('*') && behavior.PathPattern.startsWith('docs'))).toBe(false);
+  const result = new Function(`${DOCS_HEALTH_REDIRECT}; return handler({});`)();
+  expect(result.statusCode).toBe(301);
+  expect(result.headers.location.value).toBe('/docs#health');
+  template.hasResourceProperties('AWS::CloudFront::Function', { FunctionConfig: Match.objectLike({ Runtime: 'cloudfront-js-2.0' }) });
 });

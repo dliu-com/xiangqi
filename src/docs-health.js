@@ -1,4 +1,5 @@
-import { t, LANGUAGE_EVENT } from './i18n.js';
+// The Testing tab (/docs#health) of the docs page; docs.js builds it like the other tabs.
+import { t } from './i18n.js';
 import { flow, table, callout, more } from './diagram.js';
 import { FUNCTIONS, HEALTH_FUNCTIONS, CHECKS, NOT_TESTED, HEALTH_EXAMPLE } from './health-checks.js';
 
@@ -49,8 +50,7 @@ function markdownLink() {
 
 const FUNCTION_NAMES = { pages: ['页面', 'Pages'], docs: ['文档', 'Docs'], game: ['共享棋局', 'Shared game'], rules: ['行棋规则', 'Move rules'] };
 
-function build(root) {
-  while (root.lastElementChild && root.lastElementChild !== root.firstElementChild) root.lastElementChild.remove();
+export function health(root) {
   const add = writer(root);
 
   add('p', t('status.dliu.com 每 15 分钟以普通访客的身份检查一次本网站：不登录，只“看”，从不走棋，所以不会打扰正在下的棋。',
@@ -123,10 +123,3 @@ ${HEALTH_EXAMPLE}`),
     'Source: dliu-com/xiangqi (src/health-checks.js, backend/handler.cjs, tests/health.test.js).'), 'source');
 }
 
-function render() {
-  document.title = `${t('健康检查', 'Health')} · ${t('文档 · DL 中国象棋', 'Docs · DL Xiangqi')}`;
-  build(document.getElementById('health'));
-}
-
-render();
-window.addEventListener(LANGUAGE_EVENT, render);
