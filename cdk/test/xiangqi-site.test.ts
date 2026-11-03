@@ -99,3 +99,27 @@ test('a request flood cannot take more than 10 of the account\'s Lambda runs', (
 function cloudfrontNoCache() {
   return '4135ea2d-6df8-44a3-9df3-4b5a84be39ad';
 }
+
+test('the game Lambda role can only write its own logs and read/write its own table', () => {
+  const roles = template.findResources('AWS::IAM::Role');
+  const gameRole = Object.entries(roles).find(([id]) => id.startsWith('GameHandlerRole'));
+  expect(gameRole).toBeDefined();
+  expect(gameRole![1].Properties.ManagedPolicyArns).toBeUndefined();
+  const policies = Object.values(template.findResources('AWS::IAM::Policy'))
+    .filter((policy: any) => policy.Properties.Roles.some((role: any) => role.Ref === gameRole![0]));
+  const statements = policies.flatMap((policy: any) => policy.Properties.PolicyDocument.Statement);
+  expect(statements.flatMap((statement: any) => [].concat(statement.Action)).sort())
+    .toEqual(['dynamodb:GetItem', 'dynamodb:PutItem', 'logs:CreateLogStream', 'logs:PutLogEvents']);
+  for (const statement of statements) {
+    expect(JSON.stringify(statement.Resource)).not.toBe('"*"');
+    expect(JSON.stringify(statement.Action)).not.toContain('*');
+  }
+  template.hasResourceProperties('AWS::Lambda::Function', {
+    Role: { 'Fn::GetAtt': [gameRole![0], 'Arn'] }, ReservedConcurrentExecutions: 10,
+  });
+});
+
+test('the game table is protected from deletion and the logs expire after a week', () => {
+  template.hasResourceProperties('AWS::DynamoDB::Table', { DeletionProtectionEnabled: true, SSESpecification: { SSEEnabled: true } });
+  template.hasResourceProperties('AWS::Logs::LogGroup', { RetentionInDays: 7 });
+});

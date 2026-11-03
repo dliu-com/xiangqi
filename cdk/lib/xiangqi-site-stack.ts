@@ -90,6 +90,7 @@ export class XiangqiSiteStack extends Stack {
       partitionKey: { name: 'gameId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       encryption: dynamodb.TableEncryption.AWS_MANAGED,
+      deletionProtection: true,
       removalPolicy: RemovalPolicy.RETAIN,
     });
     const root = path.join(__dirname, '..', '..');
@@ -98,14 +99,20 @@ export class XiangqiSiteStack extends Stack {
     const serviceSource = fs.readFileSync(path.join(root, 'backend/game-service.js'), 'utf8')
       .replace(/^import .*;\n/gm, '').replace(/^export /gm, '');
     const handlerSource = fs.readFileSync(path.join(root, 'backend/handler.cjs'), 'utf8');
+    const gameLogs = new logs.LogGroup(this, 'GameLogs', { retention: logs.RetentionDays.ONE_WEEK, removalPolicy: RemovalPolicy.DESTROY });
+    // Least privilege: write to its own log group and read/write its one table item, nothing else
+    // (the default AWSLambdaBasicExecutionRole would allow writing to every log group).
+    const gameRole = new iam.Role(this, 'GameHandlerRole', { assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com') });
+    gameLogs.grantWrite(gameRole);
     const gameHandler = new lambda.Function(this, 'GameHandler', {
       runtime: lambda.Runtime.NODEJS_22_X,
       handler: 'index.handler',
       timeout: Duration.seconds(20),
       memorySize: 256,
+      role: gameRole,
       // Caps a request flood so it cannot use up the Lambda concurrency the account's other sites share.
       reservedConcurrentExecutions: 10,
-      logGroup: new logs.LogGroup(this, 'GameLogs', { retention: logs.RetentionDays.ONE_WEEK, removalPolicy: RemovalPolicy.DESTROY }),
+      logGroup: gameLogs,
       environment: { TABLE_NAME: gameTable.tableName, SITE_ORIGIN: Fn.join('', ['https://', domainName]) },
       code: lambda.Code.fromInline([engineSource, serviceSource, handlerSource].join('\n')),
     });

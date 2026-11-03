@@ -1,7 +1,7 @@
 AWS_REGION ?= eu-west-1
 STACK_NAME ?= XiangqiSite
 
-.PHONY: install serve test synth diff deploy-infra publish deploy
+.PHONY: install serve test synth diff deploy-infra publish deploy security-test
 
 install:
 	cd cdk && npm ci
@@ -26,3 +26,7 @@ publish:
 	AWS_REGION=$(AWS_REGION) STACK_NAME=$(STACK_NAME) scripts/publish-site.sh
 
 deploy: test deploy-infra publish
+
+# Live, non-destructive penetration test of the deployed site (needs curl, openssl, node and AWS CLI read access).
+security-test:
+	AWS_REGION=$(AWS_REGION) STACK_NAME=$(STACK_NAME) scripts/security-test.sh
