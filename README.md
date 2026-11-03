@@ -31,7 +31,7 @@ Chinese is the default. The header's 中文 | English switcher (a 文/A button o
 
 ## Docs
 
-`/docs` is `src/docs.html`, uploaded to the S3 key `docs` (no URL rewriting at the edge), with tabs for **Technical architecture**, **Cost**, **Security** and **Testing** (`#health`, see "Health checks" below). `src/docs.js` builds the tabs in both languages with `src/diagram.js`, the shared diagram kit (from traffic-monitor, as used by video). There is no API tab: the game API is internal to the page. Update the docs when the architecture, prices or security controls change.
+`/docs` is `src/docs.html`, uploaded to the S3 key `docs` (no URL rewriting at the edge), with tabs for **Architecture** (`#architecture`), **Cost**, **Security** and **Testing** (`#health`, see "Health checks" below). `src/docs.js` builds the tabs in both languages with `src/diagram.js`, the shared diagram kit (from traffic-monitor, as used by video). There is no API tab: the game API is internal to the page. Update the docs when the architecture, prices or security controls change.
 
 ## Health checks for status.dliu.com
 
@@ -55,9 +55,9 @@ make security-test   # scripts/security-test.sh: 104 non-destructive checks; exi
 
 The script needs curl, openssl, node and read access to this stack's outputs through the AWS CLI. Its writes use only stale revisions or impossible actions, and it checks that the game's revision is unchanged at the end (a real player moving during the run would trip that last check).
 
-Fixed: a strict Content-Security-Policy and Permissions-Policy on pages and `/api/game`; S3 `server`/`x-amz-*` headers removed; Lambda reserved concurrency 10; the browser validates every piece in a server response; the Lambda role has only `logs:CreateLogStream`/`logs:PutLogEvents` on its log group and `dynamodb:GetItem`/`PutItem` on its table; DynamoDB deletion protection; 90-day log retention on every Lambda's log group; no high or critical `npm audit` findings; GitHub Actions pinned to commit SHAs. Every fix has a unit, API or CDK test.
+Fixed: a strict Content-Security-Policy and Permissions-Policy on pages and `/api/game`; S3 `server`/`x-amz-*` headers removed; Lambda reserved concurrency 10; the browser validates every piece in a server response; the Lambda role has only `logs:CreateLogStream`/`logs:PutLogEvents` on its log group and `dynamodb:GetItem`/`PutItem` on its table; DynamoDB deletion protection; 90-day log retention on every Lambda's log group; no high or critical `npm audit` findings. Every fix has a unit, API or CDK test.
 
-Waiting on the owner's decision (they cost money, delete data or change IAM): a WAF rate-based rule or budget alert against request floods, point-in-time recovery for the game, expiring old S3 object versions, and a GitHub OIDC deploy role instead of access keys. Accepted by design: anyone can change the one shared game.
+Waiting on the owner's decision (they cost money, delete data or change IAM): a WAF rate-based rule or budget alert against request floods, point-in-time recovery for the game, and expiring old S3 object versions. Accepted by design: anyone can change the one shared game.
 
 ## Project structure
 
@@ -70,7 +70,6 @@ The structure follows the other dliu.com applications:
 - `cdk/test/` and `tests/`: infrastructure, game-rule, persistence, and API tests.
 - `scripts/publish-site.sh`: uploads static files to this stack's bucket and invalidates CloudFront.
 - `jenkins/deploy/Jenkinsfile`: deployment pipeline using the same Jenkins agent as the other apps.
-- `.github/workflows/deploy.yml`: optional GitHub Actions deployment, following the `home` app's workflow.
 
 ## Hosting
 
@@ -85,7 +84,7 @@ The DynamoDB on-demand table stores a single item, `gameId=current`, with the co
 - **Cached at the edge for up to 1 day:** `app.js`, `engine.js`, `i18n.js`, `agent-tools.js`, `docs.js`, `diagram.js`, `styles.css`, and `favicon.svg`. The shared `dl.css` and DL logo are served and cached by files.dliu.com. `scripts/publish-site.sh` uploads them with `public, max-age=300, s-maxage=86400, stale-while-revalidate=86400`. The static cache policy's maximum TTL is also 1 day.
 - **Always revalidated:** `index.html` and `docs` (`no-cache, max-age=0, must-revalidate`) and `404.html` (`max-age=0, must-revalidate`). CloudFront keeps error responses for 30 seconds.
 - **Never cached:** `/api/game` uses the `CachingDisabled` policy and returns `no-store`. The game state is in DynamoDB, not S3.
-- **How changes are cleared:** files change only through `scripts/publish-site.sh`, which `make deploy`, `make publish`, GitHub Actions, and Jenkins all use. Each publish invalidates `/*` and waits until it completes.
+- **How changes are cleared:** files change only through `scripts/publish-site.sh`, which `make deploy`, `make publish` and Jenkins all use. Each publish invalidates `/*` and waits until it completes.
 - **No automatic clearing:** there is no S3 → EventBridge → Lambda → CloudFront invalidation. Nothing else writes to the bucket, so the publish invalidation already covers every change. Automatic clearing would also add a second invalidation for each file on every publish. If anything starts writing edge-cached files to this bucket outside the publish script, add automatic clearing for those keys. HTML doesn't need it because it is always revalidated.
 
 ## Usage-based costs
@@ -120,7 +119,7 @@ make deploy
 
 For later frontend-only changes, run `npm test` followed by `make publish`. If `src/engine.js` changes, redeploy the infrastructure too because Lambda uses the same rules. Run `make diff` to review infrastructure changes.
 
-GitHub Actions uses the existing apps' `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` repository secret convention. Jenkins uses its configured deployment identity. Neither pipeline needs a continuously running application server.
+Deploy from your own computer with `make deploy`, or with Jenkins, which uses its configured deployment identity. There is no GitHub Actions workflow. Neither needs a continuously running application server.
 
 ## API
 

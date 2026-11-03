@@ -12,7 +12,8 @@ export function renderHealthMarkdown() {
 
 How to test ${SITE} as an anonymous guest, for machines and AI agents. This is the full technical version of the
 Testing tab at ${SITE}/docs#health and is generated from the same data (src/health-checks.js in dliu-com/xiangqi). It follows the
-dliu.com health contract used by status.dliu.com.
+dliu.com health contract used by status.dliu.com, which runs these checks every 15 minutes from Ireland
+(eu-west-1), the US (us-east-1) and Japan (ap-northeast-1).
 
 ## Rules
 
@@ -26,9 +27,9 @@ dliu.com health contract used by status.dliu.com.
 
 A function is critical when the site counts as down without it.
 
-${row(['Key', 'Name', 'Critical', 'What it does', 'Implementation'])}
-${row(['---', '---', '---', '---', '---'])}
-${FUNCTIONS.map(fn => row([`\`${fn.key}\``, fn.name, fn.critical ? 'yes' : 'no', fn.en, fn.detail])).join('\n')}
+${row(['Key', 'Name', 'Critical', 'What it does for a visitor', 'What is checked', 'Implementation'])}
+${row(['---', '---', '---', '---', '---', '---'])}
+${FUNCTIONS.map(fn => row([`\`${fn.key}\``, fn.name, fn.critical ? 'yes' : 'no', fn.whatEn, fn.en, fn.detail])).join('\n')}
 
 ## Guest checks
 
@@ -73,7 +74,7 @@ ${HEALTH_EXAMPLE}
 
 ## Not tested
 
-${NOT_TESTED.map(item => `- ${item.en}`).join('\n')}
+${NOT_TESTED.map(item => `- ${item.detail}`).join('\n')}
 - Security behaviour (bypassing CloudFront, cross-site requests, injection): see ${SITE}/docs#security and
   \`make security-test\` in the repository, which needs read access to the stack's AWS outputs.
 `;

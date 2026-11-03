@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { FUNCTIONS, HEALTH_FUNCTIONS, CHECKS, SITE } from '../src/health-checks.js';
+import { FUNCTIONS, HEALTH_FUNCTIONS, CHECKS, SITE, NOT_TESTED } from '../src/health-checks.js';
 import { renderHealthMarkdown } from '../scripts/health-md.mjs';
 
 const read = file => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
@@ -118,9 +118,10 @@ test('/docs/health.md is the generated, full technical version', () => {
   }
 });
 
-test('the Testing tab (/docs#health) is people-first: a diagram, plain lines and folded technical details', () => {
+test('the Testing tab (/docs#health) is for people: numbers, flows, a plain table, a chart and no exact technical details', () => {
   const page = read('src/docs.html');
   assert.ok(page.includes('<a href="/docs#health" data-tab="health" data-en="Testing">测试</a>'));
+  assert.ok(page.includes('<a href="/docs#architecture" data-tab="architecture" aria-current="page" data-en="Architecture">架构</a>'));
   assert.ok(page.includes('<article id="health" class="dl-docs" hidden>'));
   const docs = read('src/docs.js');
   assert.ok(docs.includes("import { health } from './docs-health.js';"));
@@ -128,14 +129,24 @@ test('the Testing tab (/docs#health) is people-first: a diagram, plain lines and
   assert.ok(docs.includes('const BUILDERS = { architecture, cost, security, health };'));
   const script = read('src/docs-health.js');
   assert.match(script, /export function health\(root\)/);
-  assert.match(script, /flow\(\{/);
+  assert.match(script, /root\.append\(stats\(\[/);
+  assert.equal((script.match(/flow\(\{/g) || []).length, 2);
   for (const tone of ['good', 'warn', 'bad']) assert.ok(script.includes(`tone: '${tone}'`), tone);
-  assert.equal((script.match(/root\.append\(more\(/g) || []).length, 3);
-  assert.ok(script.includes("link.href = '/docs/health.md'"));
-  assert.ok(script.includes('Full technical version (Markdown)'));
-  // The technical tables and JSON appear only inside the folded blocks.
-  const beforeDetails = script.slice(script.indexOf('export function health'), script.indexOf("add('h2', t('技术细节'"));
-  assert.doesNotMatch(beforeDetails, /CHECKS|HEALTH_EXAMPLE|application\/|code\(/);
+  assert.match(script, /barChart\(/);
+  assert.ok(script.includes("t('如果坏了，你会看到', 'If it broke, you would notice')"));
+  assert.ok(script.includes("link.textContent = t('给机器读的技术版本（Markdown）', 'Technical version for machines (Markdown)');"));
+  assert.ok(script.includes("link.href = '/docs/health.md';"));
+  // Nothing folded and no exact technical details: no <details>, code, status codes, content types or JSON.
+  assert.doesNotMatch(script, /\bmore\(|\bcode\(|\bmono\(|details|<code|HEALTH_EXAMPLE|HEALTH_FUNCTIONS|application\/|text\/html|\b(200|301|404|405|415|503)\b|https?:\/\//);
+  assert.doesNotMatch(script, /CHECKS\.map|check\.(url|status|type|marker|location)/);
+  // The plain-words texts it shows have no URLs, status codes or formats either.
+  for (const fn of FUNCTIONS) {
+    for (const text of [fn.whatZh, fn.whatEn, fn.howZh, fn.howEn, fn.downZh, fn.downEn]) {
+      assert.ok(text, fn.key);
+      assert.doesNotMatch(text, /https?:|\b\d{3}\b|json|content-type|header/i, text);
+    }
+  }
+  for (const item of NOT_TESTED) assert.doesNotMatch(`${item.zh} ${item.en}`, /https?:|\.js\b|tests\//, item.en);
 });
 
 test('/docs/health is a redirect, not a page', () => {

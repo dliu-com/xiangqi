@@ -257,3 +257,11 @@ html.board-fullscreen { overflow: hidden; }
 .board-fullscreen .game-alert { position: static; flex: none; max-width: 800px; margin: 0 auto; padding: 6px 12px; }
 .board-fullscreen .game-alert h2 { font-size: 19px; }
 .board-fullscreen .game-alert-symbol, .board-fullscreen .game-alert p { display: none; }
+
+/* Docs Testing tab: the "not working" mark and a simple bar chart, on the shared variables. */
+.dl-docs .risk-high { color: var(--dl-danger); font-weight: 650; white-space: nowrap; }
+.health-chart-rows { display: grid; gap: 10px; }
+.health-chart-row { display: grid; grid-template-columns: minmax(5em, 9em) 1fr 2em; align-items: center; gap: 12px; font-size: 14px; }
+.health-chart-track { height: 12px; overflow: hidden; border-radius: 999px; background: var(--dl-line); }
+.health-chart-bar { display: block; height: 100%; border-radius: 999px; background: var(--dl-accent); }
+.health-chart-value { font-variant-numeric: tabular-nums; font-weight: 650; text-align: right; }

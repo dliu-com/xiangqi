@@ -3,7 +3,7 @@ import { flow, tiers, stats, table, callout, more } from './diagram.js';
 import { health } from './docs-health.js';
 
 const TABS = ['architecture', 'cost', 'security', 'health'];
-const TITLES = { architecture: ['技术架构', 'Technical architecture'], cost: ['运行成本', 'Cost'], security: ['安全', 'Security'], health: ['测试', 'Testing'] };
+const TITLES = { architecture: ['架构', 'Architecture'], cost: ['运行成本', 'Cost'], security: ['安全', 'Security'], health: ['测试', 'Testing'] };
 const num = text => ({ text, className: 'num' });
 const mono = text => ({ text, className: 'mono' });
 
@@ -27,7 +27,7 @@ function list(items) {
   return ul;
 }
 
-// ---------------------------------------------------------------- Technical architecture
+// ---------------------------------------------------------------- Architecture
 function architecture(root) {
   const add = writer(root);
   add('p', t(
@@ -128,8 +128,8 @@ function architecture(root) {
       'backend/: the Lambda handler and the authoritative game logic. CDK joins src/engine.js, backend/game-service.js and backend/handler.cjs into one dependency-free inline function.'),
     t('cdk/：XiangqiSite 堆栈（eu-west-1），包含 S3、CloudFront、DynamoDB、Lambda、证书和 DNS 记录。',
       'cdk/: the XiangqiSite stack (eu-west-1) with S3, CloudFront, DynamoDB, Lambda, the certificate and the DNS records.'),
-    t('make deploy 先运行测试（规则、API、共享外观和基础设施），再部署堆栈、上传文件，并等待 CloudFront 失效完成。GitHub Actions 和 Jenkins 使用同样的步骤。',
-      'make deploy runs the tests (rules, API, shared look and infrastructure), deploys the stack, uploads the files and waits for the CloudFront invalidation. GitHub Actions and Jenkins run the same steps.'),
+    t('make deploy 先运行测试（规则、API、共享外观和基础设施），再部署堆栈、上传文件，并等待 CloudFront 失效完成。Jenkins 使用同样的步骤；没有 GitHub Actions 工作流。',
+      'make deploy runs the tests (rules, API, shared look and infrastructure), deploys the stack, uploads the files and waits for the CloudFront invalidation. Jenkins runs the same steps; there is no GitHub Actions workflow.'),
     t('访问量由中央流量监控（traffic.dliu.com）根据 CloudFront 日志统计；本网站不运行任何统计脚本。',
       'Visits are counted by the central traffic monitor (traffic.dliu.com) from CloudFront’s logs; this site runs no analytics script.'),
   ]));
@@ -203,7 +203,7 @@ function security(root) {
     t('AWS 账单：没人下棋时接近 0，被滥用时也要有上限。', 'The AWS bill: close to $0 while idle, and bounded under abuse.'),
     t('其他 dliu.com 网站：共享同一个 AWS 账户的 Lambda 并发额度和 dliu.com 的 Cookie 域。', 'The other dliu.com sites: they share this AWS account’s Lambda concurrency and the dliu.com cookie domain.'),
     t('访客：不能被注入脚本、被点击劫持或被追踪个人信息。没有账户、密码或个人数据需要保护。', 'Visitors: no script injection, clickjacking or personal tracking. There are no accounts, passwords or personal data to protect.'),
-    t('部署凭证：AWS 访问密钥只在 GitHub 仓库密钥、Jenkins 和管理员的电脑上，应用本身没有任何密钥。', 'Deployment credentials: AWS keys live only in GitHub repository secrets, Jenkins and the owner’s computer; the app itself holds no secrets.'),
+    t('部署凭证：AWS 凭证只在 Jenkins 和管理员的电脑上，应用本身没有任何密钥。', 'Deployment credentials: AWS credentials live only in Jenkins and on the owner’s computer; the app itself holds no secrets.'),
   ]));
 
   add('h2', t('参与者', 'Actors'));
@@ -212,7 +212,7 @@ function security(root) {
     [t('带脚本的攻击者', 'Attacker with scripts'), t('直接调用任何 URL 和 AWS 端点，伪造请求头和请求体，大量发送请求', 'Call any URL and AWS endpoint directly, forge headers and bodies, send floods'), t('见渗透测试和“费用滥用”', 'See the penetration test and denial of wallet')],
     [t('其他网站', 'Another website'), t('让访客的浏览器发出请求（CSRF）、嵌入本站（点击劫持）', 'Make a visitor’s browser send requests (CSRF), frame the site (clickjacking)'), t('被 Origin、JSON、CORS 和 frame-ancestors 挡住', 'Stopped by the Origin, JSON, CORS and frame-ancestors checks')],
     [t('被盗的令牌', 'Stolen token'), t('不适用：应用没有会话、令牌或 Cookie 用于授权', 'Not applicable: the app has no sessions, tokens or cookies used for authorisation'), t('唯一的 Cookie dl_vid 是匿名访客 ID，不授予任何权限', 'The only cookie, dl_vid, is an anonymous visitor ID that grants nothing')],
-    [t('被攻破的依赖', 'Compromised dependency'), t('浏览器和 Lambda 都不运行第三方包；只有部署工具（CDK、Jest）来自 npm', 'Neither the browser nor the Lambda runs third-party packages; only the build tools (CDK, Jest) come from npm'), t('锁定版本，npm audit 无高危；GitHub Actions 锁定到提交哈希', 'Locked versions, no high npm advisories; GitHub Actions pinned to commit hashes')],
+    [t('被攻破的依赖', 'Compromised dependency'), t('浏览器和 Lambda 都不运行第三方包；只有部署工具（CDK、Jest）来自 npm', 'Neither the browser nor the Lambda runs third-party packages; only the build tools (CDK, Jest) come from npm'), t('锁定版本，npm audit 无高危；没有 GitHub Actions 工作流', 'Locked versions, no high npm advisories; no GitHub Actions workflow')],
     [t('持有部署凭证的人', 'Holder of deployment credentials'), t('部署任何代码、读写表和存储桶', 'Deploy any code, read and write the table and bucket'), t('在应用之外：由 AWS 账户和 GitHub 仓库的权限保护', 'Outside the app: protected by the AWS account and GitHub repository permissions')],
   ]));
 
@@ -258,7 +258,7 @@ function security(root) {
     t('读取棋局：浏览器每 5 秒 GET /api/game → CloudFront（不缓存）→ Lambda 函数 URL（SigV4 签名）→ DynamoDB GetItem（强一致）。', 'Reading the game: the browser GETs /api/game every 5 s → CloudFront (no cache) → Lambda function URL (SigV4-signed) → DynamoDB GetItem (strongly consistent).'),
     t('保存动作：浏览器 POST {版本号, 动作} 和请求体 SHA-256 → CloudFront 签名 → Lambda 检查 Origin、类型、大小和规则 → DynamoDB 按版本号条件 PutItem。', 'Saving an action: the browser POSTs {revision, action} with the body’s SHA-256 → CloudFront signs → Lambda checks Origin, type, size and the rules → DynamoDB PutItem, conditional on the revision.'),
     t('设置：对弈方式、执棋方、方向和语言只写入浏览器的 localStorage，从不发送给服务器。', 'Settings: play mode, side, orientation and language are written only to the browser’s localStorage and never sent.'),
-    t('部署：管理员的电脑、Jenkins 或 GitHub Actions → CloudFormation、S3 上传和 CloudFront 失效。', 'Deployment: the owner’s computer, Jenkins or GitHub Actions → CloudFormation, S3 upload and CloudFront invalidation.'),
+    t('部署：管理员的电脑或 Jenkins → CloudFormation、S3 上传和 CloudFront 失效。', 'Deployment: the owner’s computer or Jenkins → CloudFormation, S3 upload and CloudFront invalidation.'),
   ]));
 
   add('h2', t('STRIDE 威胁模型', 'STRIDE threat model'));
@@ -281,8 +281,8 @@ function security(root) {
     ['DynamoDB', 'T', t('并发写入互相覆盖', 'Concurrent writes overwrite each other'), t('按版本号条件写入；冲突返回 409', 'Writes conditional on the revision; conflicts return 409'), LOW],
     ['DynamoDB', 'T/D', t('有人开始新局清空棋局，或表被删除', 'Someone starts a new game and clears it, or the table is deleted'), t('新局需要确认；表启用删除保护且删除堆栈时保留；没有备份', 'New game needs confirming; the table has deletion protection and is kept if the stack is deleted; there is no backup'), MEDIUM],
     ['S3', 'T/I', t('网页文件被篡改或泄露未发布的文件', 'Page files tampered with or unpublished files exposed'), t('只有部署凭证能写入；只有 CloudFront 能读；启用版本控制；仓库中的源码和测试不会上传', 'Only deployment credentials can write; only CloudFront can read; versioned; source and tests are never uploaded'), LOW],
-    [t('部署流水线', 'Deployment pipeline'), 'T/E', t('被篡改的 Action 或 npm 包', 'A tampered Action or npm package'), t('Actions 锁定到提交哈希；package-lock；部署前运行全部测试', 'Actions pinned to commit hashes; package-lock; all tests run before deploying'), LOW],
-    [t('部署流水线', 'Deployment pipeline'), 'S', t('长期 AWS 访问密钥泄露', 'Long-lived AWS access keys leak'), t('存放在 GitHub 密钥和 Jenkins 中；可改用 GitHub OIDC 角色', 'Kept in GitHub secrets and Jenkins; GitHub OIDC roles would remove them'), DECIDE],
+    [t('部署流水线', 'Deployment pipeline'), 'T/E', t('被篡改的 npm 包', 'A tampered npm package'), t('package-lock；部署前运行全部测试；没有 GitHub Actions 工作流', 'package-lock; all tests run before deploying; no GitHub Actions workflow'), LOW],
+    [t('部署流水线', 'Deployment pipeline'), 'S', t('部署凭证泄露', 'Deployment credentials leak'), t('只在 Jenkins 和管理员的电脑上；GitHub 中没有 AWS 密钥，也没有工作流', 'Only in Jenkins and on the owner’s computer; no AWS keys or workflow in GitHub'), LOW],
   ]));
 
   add('h2', t('费用滥用（拒绝钱包）', 'Denial of wallet'));
@@ -359,8 +359,8 @@ function security(root) {
     ['XQ-08', LOW, t('Lambda 角色使用 AWSLambdaBasicExecutionRole，可写入任何日志组', 'The Lambda role used AWSLambdaBasicExecutionRole, which can write to any log group'), FIXED, mono('2ef5d49')],
     ['XQ-09', LOW, t('棋局表没有删除保护', 'No deletion protection on the game table'), FIXED, mono('2ef5d49')],
     ['XQ-10', LOW, t('构建工具有 1 个严重、3 个高危 npm 公告（handlebars、brace-expansion、js-yaml、browserslist；只在构建和测试时运行）', 'Build tools had 1 critical and 3 high npm advisories (handlebars, brace-expansion, js-yaml, browserslist; build and test time only)'), FIXED, mono('2ef5d49')],
-    ['XQ-11', LOW, t('GitHub Actions 引用可变的标签', 'GitHub Actions referenced by mutable tags'), FIXED, mono('2ef5d49')],
-    ['XQ-12', LOW, t('GitHub Actions 部署依赖长期访问密钥（仓库目前没有配置，所以部署失败）', 'The GitHub Actions deploy relies on long-lived access keys (none are configured, so it fails)'), DECIDE, '—'],
+    ['XQ-11', LOW, t('GitHub Actions 引用可变的标签', 'GitHub Actions referenced by mutable tags'), t('✓ 已删除工作流', '✓ Workflow deleted'), mono('2ef5d49')],
+    ['XQ-12', LOW, t('GitHub Actions 部署依赖长期访问密钥（仓库目前没有配置，所以部署失败）', 'The GitHub Actions deploy relied on long-lived access keys (none were configured, so it failed)'), t('✓ 已删除工作流', '✓ Workflow deleted'), '—'],
     ['XQ-13', LOW, t('棋局没有备份（未启用时间点恢复）', 'The game has no backup (no point-in-time recovery)'), DECIDE, '—'],
     ['XQ-14', LOW, t('S3 旧版本永久保留（没有生命周期规则）', 'Old S3 object versions are kept forever (no lifecycle rule)'), DECIDE, '—'],
     ['XQ-15', LOW, t('证书辅助函数（已弃用的 DnsValidatedCertificate）对 "*" 拥有 acm 权限', 'The certificate helper (deprecated DnsValidatedCertificate) has acm actions on "*"'), ACCEPTED, '—'],
@@ -382,8 +382,8 @@ function security(root) {
       'src/app.js: innerHTML is used only with checked pieces and fixed translated text; server messages use textContent; it only calls same-origin /api/game; localStorage holds only fixed enum values. i18n.js, docs.js and diagram.js use textContent only.'),
     t('cdk/lib/xiangqi-site-stack.ts：Lambda 角色只有 4 个权限，没有 "*"；存储桶禁止公开访问、禁用 ACL、加密、拒绝非 HTTPS，只允许这个分发 GetObject；函数 URL 只允许这个分发调用；表加密并有删除保护；两个 Lambda（棋局 API 和证书辅助函数）的日志都写入本堆栈的日志组，保留 90 天。',
       'cdk/lib/xiangqi-site-stack.ts: the Lambda role has 4 permissions and no "*"; the bucket blocks public access, disables ACLs, is encrypted, denies non-HTTPS and lets only this distribution GetObject; only this distribution may invoke the function URL; the table is encrypted with deletion protection; both Lambdas (the game API and the certificate helper) log to this stack’s log groups, kept 90 days.'),
-    t('scripts/dev-server.mjs 只监听 127.0.0.1，并防止路径穿越；.github/workflows/deploy.yml 只有 contents: read 权限。',
-      'scripts/dev-server.mjs listens only on 127.0.0.1 and guards against path traversal; .github/workflows/deploy.yml has only contents: read.'),
+    t('scripts/dev-server.mjs 只监听 127.0.0.1，并防止路径穿越；仓库中没有 GitHub Actions 工作流。',
+      'scripts/dev-server.mjs listens only on 127.0.0.1 and guards against path traversal; the repository has no GitHub Actions workflow.'),
     t('测试：52 个 Node 测试和 8 个 CDK 测试覆盖安全路径——注入式请求体、Origin（包括 null 和其他 dliu.com 网站）、内容类型、超大请求体、并发写入、无泄露的 500、伪造的棋局数据、响应头、IAM 权限、删除保护和日志保留。',
       'Tests: 52 Node tests and 8 CDK tests cover the security paths — injection-style bodies, Origin (including null and other dliu.com sites), content types, oversized bodies, concurrent writes, leak-free 500s, forged game data, response headers, IAM permissions, deletion protection and log retention.'),
   ]));
@@ -405,8 +405,6 @@ function security(root) {
       'There is no WAF or rate limit (XQ-03, your decision). The Lambda side of the bill is capped; CloudFront request charges are not.'),
     t('棋局没有备份（XQ-13，待你决定：时间点恢复会产生费用）；S3 旧版本永久保留（XQ-14，待你决定：清理会删除数据）。',
       'The game has no backup (XQ-13, your decision: point-in-time recovery costs money); old S3 versions are kept forever (XQ-14, your decision: expiring them deletes data).'),
-    t('GitHub Actions 依赖长期访问密钥（XQ-12，待你决定：改用 OIDC 角色需要修改 IAM）。',
-      'GitHub Actions relies on long-lived access keys (XQ-12, your decision: an OIDC role needs an IAM change).'),
     t('证书辅助函数的 acm 权限作用于 "*"，因为 ACM 的 RequestCertificate 不支持资源级权限；它只在部署时运行。',
       'The certificate helper’s acm actions apply to "*" because ACM’s RequestCertificate has no resource-level permissions; it runs only at deploy time.'),
     t('被拒绝的 API 请求显示 CloudFront 的 404 页面；网站也能通过 *.cloudfront.net 访问，但从那里不能写入。',
