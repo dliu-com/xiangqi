@@ -14,9 +14,55 @@ async function readGame() {
   }));
   return data.Item ? JSON.parse(data.Item.state.S) : createState();
 }
+// Public, read-only health check for status.dliu.com (see /docs/health). It reads nothing from the request
+// (no headers, cookies or query string), makes one cheap read and never writes. Keys match /docs/health.
+const HEALTH_FUNCTIONS = [
+  { key: 'game', name: 'Shared game storage' },
+  { key: 'rules', name: 'Move rules' },
+];
+async function checkGame() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), Number(process.env.HEALTH_TIMEOUT_MS) || 2000);
+  const started = Date.now();
+  try {
+    await db.send(new GetItemCommand({
+      TableName: process.env.TABLE_NAME,
+      Key: { gameId: { S: 'current' } },
+      ProjectionExpression: '#revision',
+      ExpressionAttributeNames: { '#revision': 'revision' },
+    }), { abortSignal: controller.signal });
+    return Date.now() - started > 1000 ? { status: 'warn', output: 'slow' } : { status: 'pass' };
+  } catch {
+    return { status: 'fail', output: controller.signal.aborted ? 'timeout' : 'read failed' };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+function checkRules() {
+  try {
+    return allLegalMoves(initialBoard(), 'red').length === 44 ? { status: 'pass' } : { status: 'fail', output: 'rules check failed' };
+  } catch {
+    return { status: 'fail', output: 'rules check failed' };
+  }
+}
+async function health() {
+  const results = { game: await checkGame(), rules: checkRules() };
+  const functions = HEALTH_FUNCTIONS.map(({ key, name }) => ({ key, name, ...results[key] }));
+  const status = functions.some(f => f.status === 'fail') ? 'fail' : functions.some(f => f.status === 'warn') ? 'warn' : 'pass';
+  return {
+    statusCode: status === 'fail' ? 503 : 200,
+    headers: { 'content-type': 'application/health+json', 'cache-control': 'public, max-age=60', 'x-content-type-options': 'nosniff' },
+    body: JSON.stringify({ status, time: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'), functions }),
+  };
+}
+
 exports.handler = async event => {
   const method = event.requestContext?.http?.method;
   const requestPath = event.rawPath;
+  if (requestPath === '/health') {
+    if (method !== 'GET' && method !== 'HEAD') return response(405, { message: '不支持此请求方法。' });
+    return health();
+  }
   if (requestPath !== '/api/game') return response(404, { message: '页面不存在。' });
   try {
     if (method === 'GET') return response(200, { state: await readGame() });

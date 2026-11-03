@@ -59,7 +59,7 @@ out="$(echo | openssl s_client -connect "$HOST:443" -servername "$HOST" -tls1_2 
 check 'Weak ciphers (RC4, 3DES, NULL, EXPORT, MD5)' refused "$(echo "$out" | grep -q 'Cipher is (NONE)\|alert\|no cipher\|errno' && echo refused || echo accepted)" "$(echo "$out" | grep -q 'Cipher is (NONE)\|alert\|no cipher\|errno' && echo 1 || echo 0)"
 
 # Security headers
-for path in / /docs /api/game /no-such-page; do
+for path in / /docs /docs/health /api/game /health /no-such-page; do
   h="$(curl -s -o /dev/null -D - "$SITE$path" | tr -d '\r')"
   ok=1
   for expected in "content-security-policy: $CSP" 'strict-transport-security: max-age=31536000' 'x-frame-options: DENY' 'x-content-type-options: nosniff' 'referrer-policy: strict-origin-when-cross-origin' 'permissions-policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()'; do
@@ -91,6 +91,15 @@ for path in /api/ /api/game/ /api/x /api/..%2fgame '/api/game%00' /api/game.json
   c="$(code "$SITE$path")"
   check "Unknown API path $path" 'not 2xx (404, or 400 from CloudFront)' "$c" "$(matches "$c" '^4')"
 done
+
+# /health for status.dliu.com: public, read only, cached, and blind to cookies, Authorization and query strings
+h="$(curl -s -D - -o "$TMP/health" "$SITE/health?probe=$RANDOM" -H 'Authorization: Bearer forged' -H 'Cookie: session=forged' | tr -d '\r')"
+check '/health with forged credentials and a query string' '200 application/health+json, status pass' "$(head -1 <<<"$h" | cut -d' ' -f2) $(grep -i '^content-type' <<<"$h" | cut -d' ' -f2) $(head -c 60 "$TMP/health")" "$(matches "$(head -1 <<<"$h") $(grep -i '^content-type' <<<"$h") $(cat "$TMP/health")" ' 200 .*application/health\+json.*"status":"pass"')"
+check '/health is cached at CloudFront for 60 s' 'cache-control: public, max-age=60' "$(grep -i '^cache-control' <<<"$h")" "$(grep -qi '^cache-control: public, max-age=60' <<<"$h" && echo 1 || echo 0)"
+leak="$(grep -oE 'arn:|XiangqiSite|GameState|amazonaws|Table|revision' "$TMP/health" | head -1)"
+check '/health reveals nothing private' 'no names, ARNs or game data' "${leak:-none}" "$([[ -z $leak ]] && echo 1 || echo 0)"
+c="$(code -X POST -H "$json" --data '{}' "$SITE/health")"; check 'POST /health' 'refused (not 2xx)' "$c" "$(matches "$c" '^[^2]')"
+c="$(code -X DELETE "$SITE/health")"; check 'DELETE /health' 'refused (not 2xx)' "$c" "$(matches "$c" '^[^2]')"
 
 # Bypassing CloudFront
 c="$(code "${FUNCTION_URL}api/game")"; check 'Lambda function URL called directly' 403 "$c" "$(is "$c" 403)"

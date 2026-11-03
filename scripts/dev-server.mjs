@@ -5,9 +5,14 @@ import { fileURLToPath } from 'node:url';
 import { createState, transition, GameError } from '../backend/game-service.js';
 const root = path.resolve(fileURLToPath(new URL('../src/', import.meta.url)));
 let state = createState();
-const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
+const types = { '.md': 'text/markdown; charset=utf-8', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml' };
 const server = http.createServer(async (request, response) => {
   const pathname = new URL(request.url, 'http://localhost').pathname;
+  if (pathname === '/health') {
+    // The preview has no database, so storage always passes; production runs the real checks in backend/handler.cjs.
+    response.writeHead(200, { 'content-type': 'application/health+json', 'cache-control': 'no-store' });
+    return response.end(JSON.stringify({ status: 'pass', time: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'), functions: [{ key: 'game', name: 'Shared game storage', status: 'pass' }, { key: 'rules', name: 'Move rules', status: 'pass' }] }));
+  }
   if (pathname === '/api/game') {
     const send = (code, value) => { response.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); response.end(JSON.stringify(value)); };
     if (request.method === 'GET') return send(200, { state });
@@ -22,7 +27,7 @@ const server = http.createServer(async (request, response) => {
     } catch (error) { return send(error.statusCode || 500, { message: error.message, ...(error.statusCode === 409 ? { state } : {}) }); }
   }
   try {
-    const pages = { '/': '/index.html', '/docs': '/docs.html' };
+    const pages = { '/': '/index.html', '/docs': '/docs.html', '/docs/health': '/docs-health.html', '/docs/health.md': '/docs-health.md' };
     const filename = path.resolve(root, '.' + decodeURIComponent(pages[pathname] || pathname));
     if (!filename.startsWith(root + path.sep) && filename !== root) throw new Error('Invalid path');
     const data = await readFile(filename);

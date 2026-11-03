@@ -193,8 +193,8 @@ function security(root) {
 
   add('p', t('任何人都可以下这盘共享的棋，所以要保护的不是“谁能下”，而是：只能保存合法的棋、不能绕过 CloudFront、不能注入脚本、不能读到或改到别的东西，以及费用不能失控。',
     'Anyone may play the shared game, so the job is not to decide who may play, but to make sure that only legal moves are saved, nothing bypasses CloudFront, no script can be injected, nothing else can be read or changed, and the bill cannot run away.'), 'lead');
-  root.append(callout('shield', t(`${TEST_DATE} 完成威胁建模、代码审查和三轮线上渗透测试（修复前、修复后、再次加固后）。所有中高风险问题均已修复或由你决定；最后一轮 96 项检查全部通过。任何人都可以用 make security-test 重新运行这些测试，它不会改动棋局。`,
-    `Threat-modelled, code-reviewed and penetration-tested against the live site on ${TEST_DATE}, in three rounds (before fixes, after fixes, after further hardening). Every Medium or higher finding is fixed or waiting on your decision; all 96 checks of the last round passed. Anyone can rerun them with make security-test, which never changes the game.`)));
+  root.append(callout('shield', t(`${TEST_DATE} 完成威胁建模、代码审查和三轮线上渗透测试（修复前、修复后、再次加固后）。所有中高风险问题均已修复或由你决定；最新一轮 103 项检查全部通过。任何人都可以用 make security-test 重新运行这些测试，它不会改动棋局。`,
+    `Threat-modelled, code-reviewed and penetration-tested against the live site on ${TEST_DATE}, in three rounds (before fixes, after fixes, after further hardening). Every Medium or higher finding is fixed or waiting on your decision; all 103 checks of the latest round passed. Anyone can rerun them with make security-test, which never changes the game.`)));
 
   add('h2', t('要保护的资产', 'Assets'));
   root.append(list([
@@ -306,8 +306,8 @@ function security(root) {
   ]));
 
   add('h2', t('线上渗透测试', 'Live penetration test'));
-  add('p', t(`以下是 ${TEST_DATE} 21:47 UTC 对 https://xiangqi.dliu.com 运行 scripts/security-test.sh（make security-test）的结果：96 项检查，全部通过。脚本用 curl、openssl 和 AWS CLI（只用来查找本堆栈的函数 URL、存储桶和 CloudFront 域名）。写入测试只使用过期的版本号或不可能合法的动作，脚本最后会确认棋局版本号没有变化。`,
-    `Results of scripts/security-test.sh (make security-test) against https://xiangqi.dliu.com on ${TEST_DATE} at 21:47 UTC: 96 checks, all passed. It uses curl, openssl and the AWS CLI (only to look up this stack’s function URL, bucket and CloudFront domain). Write tests use only stale revisions or actions that can never be legal, and the script finally confirms that the game’s revision did not change.`));
+  add('p', t(`以下是 ${TEST_DATE} 21:47 UTC 对 https://xiangqi.dliu.com 运行 scripts/security-test.sh（make security-test）的结果（23:11 UTC 加入 /health 后重新运行）：103 项检查，全部通过。脚本用 curl、openssl 和 AWS CLI（只用来查找本堆栈的函数 URL、存储桶和 CloudFront 域名）。写入测试只使用过期的版本号或不可能合法的动作，脚本最后会确认棋局版本号没有变化。`,
+    `Results of scripts/security-test.sh (make security-test) against https://xiangqi.dliu.com on ${TEST_DATE} at 21:47 UTC, rerun at 23:11 UTC after adding /health: 103 checks, all passed. It uses curl, openssl and the AWS CLI (only to look up this stack’s function URL, bucket and CloudFront domain). Write tests use only stale revisions or actions that can never be legal, and the script finally confirms that the game’s revision did not change.`));
   root.append(table([t('测试', 'Test'), t('预期', 'Expected'), t('实际', 'Actual'), t('日期', 'Date'), t('状态', 'Status')], [
     [t('HTTP 降级；http://host//evil.example 开放重定向', 'HTTP downgrade; open redirect via http://host//evil.example'), t('301 到 https://，仍在本站', '301 to https://, staying on this site'), '301 https://xiangqi.dliu.com/ ; https://xiangqi.dliu.com//evil.example/', date, PASS],
     [t('TLS 1.0、1.1 和弱加密套件（RC4、3DES、NULL、EXPORT、MD5）', 'TLS 1.0, 1.1 and weak ciphers (RC4, 3DES, NULL, EXPORT, MD5)'), t('拒绝', 'refused'), t('全部拒绝', 'all refused'), date, PASS],
@@ -340,6 +340,7 @@ function security(root) {
     [t('错误响应', 'Error responses'), t('没有堆栈、ARN 或内部路径', 'no stack traces, ARNs or internal paths'), t('没有', 'none'), date, PASS],
     [t('同时发出 40 个 API 读取', '40 simultaneous API reads'), t('只有 200 或 429（并发上限 10），没有 5xx', 'only 200 or 429 (concurrency cap 10), no 5xx'), '13×200, 27×429', date, FIXED],
     [t('网站设置的 Cookie', 'Cookies set by the site'), t('只有 dl_vid：Secure、HttpOnly、SameSite=Lax', 'only dl_vid: Secure, HttpOnly, SameSite=Lax'), t('符合', 'as expected'), date, PASS],
+    [t('/health 带伪造的 Authorization、Cookie 和查询字符串；POST、DELETE', '/health with a forged Authorization header, cookie and query string; POST, DELETE'), t('200 application/health+json、pass、缓存 60 秒、无私密信息；写方法被拒绝', '200 application/health+json, pass, cached 60 s, nothing private; write methods refused'), t('符合；POST 和 DELETE 被拒绝', 'as expected; POST and DELETE refused'), date, PASS],
     [t('棋局在测试前后', 'The game before and after the tests'), t('版本号不变', 'revision unchanged'), '80 → 80', date, PASS],
   ]));
   add('p', t('不适用的测试：认证与授权绕过、过期或他人凭证、OAuth/OIDC（state、nonce、PKCE、redirect_uri、重放）和 JWT（alg none、aud、iss、azp、scope）——应用没有登录或令牌；文件上传滥用和预签名 URL 重用——没有上传；Markdown 和 SVG/HTML 上传造成的 XSS——用户不能提交任何文本；execute-api 绕过——没有 API Gateway；登录后的开放重定向——没有任何跳转参数。',

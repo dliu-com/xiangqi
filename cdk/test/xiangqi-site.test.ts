@@ -132,3 +132,28 @@ test('every Lambda, including the certificate helper, logs to a stack log group 
   for (const fn of functions) expect(Object.keys(logGroups)).toContain(fn.Properties.LoggingConfig?.LogGroup?.Ref);
   template.resourceCountIs('Custom::LogRetention', 0);
 });
+
+test('/health is GET/HEAD only, forwards nothing to Lambda and is cached for 60 s', () => {
+  template.hasResourceProperties('AWS::CloudFront::CachePolicy', {
+    CachePolicyConfig: Match.objectLike({
+      DefaultTTL: 60, MaxTTL: 60, MinTTL: 0,
+      ParametersInCacheKeyAndForwardedToOrigin: Match.objectLike({
+        HeadersConfig: { HeaderBehavior: 'none' },
+        CookiesConfig: { CookieBehavior: 'none' },
+        QueryStringsConfig: { QueryStringBehavior: 'none' },
+      }),
+    }),
+  });
+  const distribution = Object.values(template.findResources('AWS::CloudFront::Distribution'))[0] as any;
+  const config = distribution.Properties.DistributionConfig;
+  const health = config.CacheBehaviors.find((behavior: any) => behavior.PathPattern === 'health');
+  const api = config.CacheBehaviors.find((behavior: any) => behavior.PathPattern === 'api/*');
+  expect(health.AllowedMethods).toEqual(['GET', 'HEAD']);
+  expect(health.OriginRequestPolicyId).toBeUndefined();
+  expect(health.TargetOriginId).toEqual(api.TargetOriginId);
+  expect(health.ResponseHeadersPolicyId).toEqual(config.DefaultCacheBehavior.ResponseHeadersPolicyId);
+  const policies = template.findResources('AWS::CloudFront::CachePolicy');
+  const healthPolicy = policies[health.CachePolicyId.Ref].Properties.CachePolicyConfig;
+  expect(healthPolicy.DefaultTTL).toBe(60);
+  expect(healthPolicy.ParametersInCacheKeyAndForwardedToOrigin.CookiesConfig.CookieBehavior).toBe('none');
+});

@@ -136,6 +136,18 @@ export class XiangqiSiteStack extends Stack {
     const trafficGeoPolicy = cloudfront.OriginRequestPolicy.fromOriginRequestPolicyId(
       this, 'TrafficGeo', Fn.importValue('TrafficGeoOriginRequestPolicyId'));
 
+    const apiOrigin = origins.FunctionUrlOrigin.withOriginAccessControl(functionUrl);
+    // /health for status.dliu.com: keyed on nothing and kept 60 s, so the Lambda runs at most about once a minute
+    // per edge location. With no origin request policy, no cookies, Authorization header or query string reach it.
+    const healthCachePolicy = new cloudfront.CachePolicy(this, 'HealthCachePolicy', {
+      minTtl: Duration.seconds(0),
+      defaultTtl: Duration.seconds(60),
+      maxTtl: Duration.seconds(60),
+      headerBehavior: cloudfront.CacheHeaderBehavior.none(),
+      cookieBehavior: cloudfront.CacheCookieBehavior.none(),
+      queryStringBehavior: cloudfront.CacheQueryStringBehavior.none(),
+    });
+
     const distribution = new cloudfront.Distribution(this, 'SiteDistribution', {
       defaultBehavior: {
         origin: origins.S3BucketOrigin.withOriginAccessControl(bucket),
@@ -150,11 +162,19 @@ export class XiangqiSiteStack extends Stack {
       },
       additionalBehaviors: {
         'api/*': {
-          origin: origins.FunctionUrlOrigin.withOriginAccessControl(functionUrl),
+          origin: apiOrigin,
           allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
           originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+          responseHeadersPolicy: headers,
+        },
+        health: {
+          origin: apiOrigin,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          cachedMethods: cloudfront.CachedMethods.CACHE_GET_HEAD,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          cachePolicy: healthCachePolicy,
           responseHeadersPolicy: headers,
         },
       },

@@ -1,0 +1,154 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import vm from 'node:vm';
+import { FUNCTIONS, HEALTH_FUNCTIONS, CHECKS, SITE } from '../src/health-checks.js';
+import { renderHealthMarkdown } from '../scripts/health-md.mjs';
+
+const read = file => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
+
+// The exact inline Lambda code CDK deploys, with a fake DynamoDB client.
+function createHandler({ send, env = {} } = {}) {
+  const sent = [];
+  class GetItemCommand { constructor(input) { this.input = input; } }
+  class PutItemCommand { constructor(input) { this.input = input; } }
+  class DynamoDBClient { async send(command, options) { sent.push(command); return send ? send(command, options) : {}; } }
+  const context = {
+    exports: {}, Buffer, console: { error() {} }, AbortController, setTimeout, clearTimeout,
+    process: { env: { TABLE_NAME: 'test-game', SITE_ORIGIN: SITE, ...env } },
+    require: () => ({ DynamoDBClient, GetItemCommand, PutItemCommand }),
+  };
+  vm.runInNewContext([
+    read('src/engine.js').replace(/^export /gm, ''),
+    read('backend/game-service.js').replace(/^import .*;\n/gm, '').replace(/^export /gm, ''),
+    read('backend/handler.cjs'),
+  ].join('\n'), context);
+  return { handler: context.exports.handler, sent, GetItemCommand, PutItemCommand };
+}
+
+// A /health request whose cookies, headers, query string and body throw if the handler touches them.
+function healthEvent(method = 'GET') {
+  const forbidden = new Set(['headers', 'cookies', 'queryStringParameters', 'rawQueryString', 'body', 'isBase64Encoded']);
+  return new Proxy({ rawPath: '/health', requestContext: { http: { method } } }, {
+    get(target, key) {
+      if (forbidden.has(key)) throw new Error(`/health read event.${String(key)}`);
+      return target[key];
+    },
+  });
+}
+
+test('GET /health returns application/health+json with the documented functions, cached for 60 s', async () => {
+  const { handler, sent, GetItemCommand } = createHandler();
+  const response = await handler(healthEvent());
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.headers['content-type'], 'application/health+json');
+  assert.equal(response.headers['cache-control'], 'public, max-age=60');
+  const body = JSON.parse(response.body);
+  assert.equal(body.status, 'pass');
+  assert.match(body.time, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
+  assert.deepEqual(body.functions, HEALTH_FUNCTIONS.map(({ key, name }) => ({ key, name, status: 'pass' })));
+  assert.deepEqual(Object.keys(body).sort(), ['functions', 'status', 'time']);
+  // One cheap read of a fixed key, and never a write.
+  assert.equal(sent.length, 1);
+  assert.ok(sent[0] instanceof GetItemCommand);
+  assert.deepEqual(JSON.parse(JSON.stringify(sent[0].input.Key)), { gameId: { S: 'current' } });
+  assert.equal(sent[0].input.ProjectionExpression, '#revision');
+  assert.notEqual(sent[0].input.ConsistentRead, true);
+  assert.equal((await handler(healthEvent('HEAD'))).statusCode, 200);
+});
+
+test('/health reads no cookies, Authorization header, query string or body', async () => {
+  const { handler } = createHandler();
+  const response = await handler(healthEvent());
+  assert.equal(response.statusCode, 200);
+  const source = read('backend/handler.cjs');
+  const healthCode = source.slice(source.indexOf('const HEALTH_FUNCTIONS'), source.indexOf('exports.handler')).replace(/^\s*\/\/.*$/gm, '');
+  assert.doesNotMatch(healthCode, /\bevent\b|cookie|authorization|querystring|rawquery/i);
+  // In the handler, /health returns before anything reads the request's headers or body.
+  const entry = source.slice(source.indexOf('exports.handler'));
+  assert.ok(entry.indexOf('return health()') < entry.indexOf('event.headers'));
+});
+
+test('a failed or timed-out read returns 503 fail with a generic reason and no details', async () => {
+  const failing = createHandler({ send: () => { throw Object.assign(new Error('User arn:aws:iam::000000000000:role/x not authorized on table test-game'), { name: 'AccessDeniedException' }); } });
+  const failed = await failing.handler(healthEvent());
+  assert.equal(failed.statusCode, 503);
+  const body = JSON.parse(failed.body);
+  assert.equal(body.status, 'fail');
+  assert.deepEqual(body.functions[0], { key: 'game', name: 'Shared game storage', status: 'fail', output: 'read failed' });
+  assert.equal(body.functions[1].status, 'pass');
+  assert.doesNotMatch(failed.body, /arn:|test-game|AccessDenied|authorized/);
+
+  const hanging = createHandler({
+    env: { HEALTH_TIMEOUT_MS: '20' },
+    send: (command, options) => new Promise((resolve, reject) => options.abortSignal.addEventListener('abort', () => reject(new Error('aborted')))),
+  });
+  const timedOut = JSON.parse((await hanging.handler(healthEvent())).body);
+  assert.deepEqual(timedOut.functions[0], { key: 'game', name: 'Shared game storage', status: 'fail', output: 'timeout' });
+});
+
+test('/health accepts only GET and HEAD', async () => {
+  const { handler, sent } = createHandler();
+  const response = await handler({ rawPath: '/health', requestContext: { http: { method: 'POST' } }, headers: {} });
+  assert.equal(response.statusCode, 405);
+  assert.equal(sent.length, 0);
+});
+
+test('the endpoint, /docs/health, /docs/health.md and the check list use the same function keys', () => {
+  const handler = read('backend/handler.cjs');
+  const handlerFunctions = [...handler.matchAll(/\{ key: '(\w+)', name: '([^']+)' \}/g)].map(([, key, name]) => ({ key, name }));
+  assert.deepEqual(handlerFunctions, HEALTH_FUNCTIONS.map(({ key, name }) => ({ key, name })));
+  const functionKeys = FUNCTIONS.map(fn => fn.key);
+  for (const { key } of HEALTH_FUNCTIONS) assert.ok(functionKeys.includes(key), key);
+  for (const check of CHECKS) {
+    for (const key of check.fn.split(', ')) assert.ok(functionKeys.includes(key), `${check.url}: ${key}`);
+    assert.ok(['GET', 'HEAD'].includes(check.method), check.url);
+  }
+  for (const key of functionKeys) assert.ok(CHECKS.some(check => check.fn.split(', ').includes(key)), `no guest check for ${key}`);
+  const markdown = read('src/docs-health.md');
+  for (const key of functionKeys) assert.ok(markdown.includes(`| \`${key}\` |`), key);
+  for (const check of CHECKS) assert.ok(markdown.includes(`| ${check.method} | ${check.url} | ${check.status} |`), check.url);
+});
+
+test('/docs/health.md is the generated, full technical version', () => {
+  assert.equal(read('src/docs-health.md'), renderHealthMarkdown(), 'run make health-md');
+  const markdown = read('src/docs-health.md');
+  for (const text of ['application/health+json', 'public, max-age=60', '503', 'Authorization', 'never `POST`', HEALTH_FUNCTIONS[0].check]) {
+    assert.ok(markdown.includes(text), text);
+  }
+});
+
+test('/docs/health is a people-first docs page: a diagram, plain lines and folded technical details', () => {
+  const page = read('src/docs-health.html');
+  assert.ok(page.includes('<link rel="stylesheet" href="https://files.dliu.com/dliu.com/ui/v1/dl-docs.css">'));
+  assert.ok(page.includes('<nav class="dl-tabs"'));
+  assert.ok(page.includes('<a href="/docs/health" aria-current="page" data-en="Health">健康检查</a>'));
+  assert.ok(page.includes('<article id="health" class="dl-docs">'));
+  assert.ok(page.includes('<script type="module" src="/docs-health.js"></script>'));
+  assert.ok(read('src/docs.html').includes('<a href="/docs/health" data-en="Health">健康检查</a>'));
+  const script = read('src/docs-health.js');
+  assert.match(script, /flow\(\{/);
+  for (const tone of ['good', 'warn', 'bad']) assert.ok(script.includes(`tone: '${tone}'`), tone);
+  assert.equal((script.match(/root\.append\(more\(/g) || []).length, 3);
+  assert.ok(script.includes("link.href = '/docs/health.md'"));
+  assert.ok(script.includes('Full technical version (Markdown)'));
+  // The technical tables and JSON appear only inside the folded blocks.
+  const beforeDetails = script.slice(script.indexOf('function build'), script.indexOf("add('h2', t('技术细节'"));
+  assert.doesNotMatch(beforeDetails, /CHECKS|HEALTH_EXAMPLE|application\/|code\(/);
+});
+
+test('every guest-check marker is in the file S3 serves, and both docs pages are published', () => {
+  const files = {
+    '/': 'src/index.html', '/app.js': 'src/app.js', '/styles.css': 'src/styles.css', '/no-such-page': 'src/404.html',
+    '/docs': 'src/docs.html', '/docs/health': 'src/docs-health.html', '/docs/health.md': 'src/docs-health.md', '/engine.js': 'src/engine.js',
+  };
+  for (const check of CHECKS) {
+    if (!check.marker || check.json) continue;
+    const file = files[new URL(check.url).pathname];
+    assert.ok(file, check.url);
+    assert.ok(read(file).includes(check.marker), `${check.url}: ${check.marker}`);
+  }
+  const publish = read('scripts/publish-site.sh');
+  assert.ok(publish.includes(`src/docs-health.html" "s3://$SITE_BUCKET_NAME/docs/health" --content-type 'text/html; charset=utf-8'`));
+  assert.ok(publish.includes(`src/docs-health.md" "s3://$SITE_BUCKET_NAME/docs/health.md" --content-type 'text/markdown; charset=utf-8'`));
+});
