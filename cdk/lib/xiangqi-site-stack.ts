@@ -20,6 +20,9 @@ import {
   StackProps,
 } from 'aws-cdk-lib';
 
+// Every log group in the account keeps its logs for 3 months.
+export const LOG_RETENTION = logs.RetentionDays.THREE_MONTHS;
+
 export const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
   "script-src 'self'",
@@ -59,6 +62,10 @@ export class XiangqiSiteStack extends Stack {
       hostedZone,
       region: 'us-east-1',
     });
+    // The certificate's helper Lambda would otherwise log to an unmanaged group without this retention.
+    const certificateFunction = certificate.node.findChild('CertificateRequestorFunction') as lambda.Function;
+    const certificateLogs = new logs.LogGroup(this, 'CertificateRequestorLogs', { retention: LOG_RETENTION, removalPolicy: RemovalPolicy.DESTROY });
+    (certificateFunction.node.defaultChild as lambda.CfnFunction).addPropertyOverride('LoggingConfig', { LogGroup: certificateLogs.logGroupName });
 
     const cachePolicy = new cloudfront.CachePolicy(this, 'SiteCachePolicy', {
       minTtl: Duration.seconds(0),
@@ -99,7 +106,7 @@ export class XiangqiSiteStack extends Stack {
     const serviceSource = fs.readFileSync(path.join(root, 'backend/game-service.js'), 'utf8')
       .replace(/^import .*;\n/gm, '').replace(/^export /gm, '');
     const handlerSource = fs.readFileSync(path.join(root, 'backend/handler.cjs'), 'utf8');
-    const gameLogs = new logs.LogGroup(this, 'GameLogs', { retention: logs.RetentionDays.ONE_WEEK, removalPolicy: RemovalPolicy.DESTROY });
+    const gameLogs = new logs.LogGroup(this, 'GameLogs', { retention: LOG_RETENTION, removalPolicy: RemovalPolicy.DESTROY });
     // Least privilege: write to its own log group and read/write its one table item, nothing else
     // (the default AWSLambdaBasicExecutionRole would allow writing to every log group).
     const gameRole = new iam.Role(this, 'GameHandlerRole', { assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com') });

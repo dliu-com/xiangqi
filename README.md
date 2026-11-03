@@ -45,7 +45,7 @@ make security-test   # scripts/security-test.sh: 96 non-destructive checks; exit
 
 The script needs curl, openssl, node and read access to this stack's outputs through the AWS CLI. Its writes use only stale revisions or impossible actions, and it checks that the game's revision is unchanged at the end (a real player moving during the run would trip that last check).
 
-Fixed: a strict Content-Security-Policy and Permissions-Policy on pages and `/api/game`; S3 `server`/`x-amz-*` headers removed; Lambda reserved concurrency 10; the browser validates every piece in a server response; the Lambda role has only `logs:CreateLogStream`/`logs:PutLogEvents` on its log group and `dynamodb:GetItem`/`PutItem` on its table; DynamoDB deletion protection; no high or critical `npm audit` findings; GitHub Actions pinned to commit SHAs. Every fix has a unit, API or CDK test.
+Fixed: a strict Content-Security-Policy and Permissions-Policy on pages and `/api/game`; S3 `server`/`x-amz-*` headers removed; Lambda reserved concurrency 10; the browser validates every piece in a server response; the Lambda role has only `logs:CreateLogStream`/`logs:PutLogEvents` on its log group and `dynamodb:GetItem`/`PutItem` on its table; DynamoDB deletion protection; 90-day log retention on every Lambda's log group; no high or critical `npm audit` findings; GitHub Actions pinned to commit SHAs. Every fix has a unit, API or CDK test.
 
 Waiting on the owner's decision (they cost money, delete data or change IAM): a WAF rate-based rule or budget alert against request floods, point-in-time recovery for the game, expiring old S3 object versions, and a GitHub OIDC deploy role instead of access keys. Accepted by design: anyone can change the one shared game.
 
@@ -84,7 +84,7 @@ The DynamoDB on-demand table stores a single item, `gameId=current`, with the co
 - DynamoDB uses `PAY_PER_REQUEST`, with no provisioned capacity or paid point-in-time recovery.
 - Lambda has no provisioned concurrency, keep-alive schedule, VPC, or NAT gateway. Its reserved concurrency of 10 costs nothing.
 - No load balancer, always-on server, API Gateway, or additional DNS hosted zone is created.
-- Game API logs expire after one week. S3 files and the saved game incur storage charges.
+- Lambda logs (the game API and the certificate helper, each in a log group this stack manages) are kept for 3 months (90 days), like every log group in the account. S3 files, the saved game and the stored logs incur storage charges.
 - The browser reads every 5 seconds while the page is open, as well as on initial load, focus, visibility return, reconnection, or explicit retry; it saves on game actions. Checks are skipped while another read or save is in progress. Browsers may slow timers in background tabs; returning to the page triggers an immediate check.
 
 ## Local development

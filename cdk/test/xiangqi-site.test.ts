@@ -119,7 +119,16 @@ test('the game Lambda role can only write its own logs and read/write its own ta
   });
 });
 
-test('the game table is protected from deletion and the logs expire after a week', () => {
+test('the game table is protected from deletion', () => {
   template.hasResourceProperties('AWS::DynamoDB::Table', { DeletionProtectionEnabled: true, SSESpecification: { SSEEnabled: true } });
-  template.hasResourceProperties('AWS::Logs::LogGroup', { RetentionInDays: 7 });
+});
+
+test('every Lambda, including the certificate helper, logs to a stack log group kept for 90 days', () => {
+  const logGroups = template.findResources('AWS::Logs::LogGroup');
+  expect(Object.keys(logGroups)).toHaveLength(2);
+  for (const group of Object.values(logGroups) as any[]) expect(group.Properties.RetentionInDays).toBe(90);
+  const functions = Object.values(template.findResources('AWS::Lambda::Function')) as any[];
+  expect(functions).toHaveLength(2);
+  for (const fn of functions) expect(Object.keys(logGroups)).toContain(fn.Properties.LoggingConfig?.LogGroup?.Ref);
+  template.resourceCountIs('Custom::LogRetention', 0);
 });

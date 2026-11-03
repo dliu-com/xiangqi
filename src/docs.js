@@ -157,7 +157,7 @@ function cost(root) {
     ['Lambda', t('每百万次调用 $0.20，每 GB 秒 $0.0000166667（x86，256 MB）。平均 10 毫秒，约合每百万次 $0.24。每月免费 100 万次调用和 40 万 GB 秒', '$0.20 per million calls and $0.0000166667 per GB-second (x86, 256 MB). At 10 ms on average that is about $0.24 per million calls. Free each month: 1 million calls and 400,000 GB-seconds'), num('$0')],
     [t('DynamoDB（按需）', 'DynamoDB (on demand)'), t('每百万读取单位 $0.1415（强一致读取每 4 KB 一个单位），每百万写入单位 $0.705（每 1 KB 一个单位）。新局约 2 KB，100 步的棋局约 11 KB。存储每 GB 每月 $0.283，每个账户前 25 GB 免费', '$0.1415 per million read units (one per 4 KB, strongly consistent) and $0.705 per million write units (one per 1 KB). A new game is about 2 KB, a 100-move game about 11 KB. Storage $0.283 per GB-month; the first 25 GB per account are free'), num('$0')],
     ['S3', t('约 80 KB 的网页文件（含旧版本），S3 标准存储每 GB 每月 $0.023；只有缓存未命中时才读取', 'About 80 KB of page files (old versions included) in S3 Standard at $0.023 per GB-month; read only on cache misses'), num('< $0.01')],
-    ['CloudWatch Logs', t('Lambda 日志保留一周，每 GB $0.57；每次调用约 350 字节，约合每百万次 $0.20', 'Lambda logs kept one week at $0.57 per GB; about 350 bytes per call, roughly $0.20 per million calls'), num('$0')],
+    ['CloudWatch Logs', t('Lambda 日志保留 3 个月（90 天）：写入每 GB $0.57，存储每 GB 每月 $0.03；每次调用约 350 字节，约合每百万次写入 $0.20、存储每月约 $0.01', 'Lambda logs kept 3 months (90 days): $0.57 per GB written and $0.03 per GB-month stored; about 350 bytes per call, roughly $0.20 per million calls to write and $0.01 a month to store'), num('$0')],
     [t('证书（ACM）与 DNS', 'Certificate (ACM) and DNS'), t('公共证书免费；指向 CloudFront 的别名记录在现有 dliu.com 区域中免费应答', 'Public certificates are free; alias records to CloudFront answer free in the existing dliu.com zone'), num('$0')],
     [t('预留并发', 'Reserved concurrency'), t('Lambda 最多同时运行 10 个，不另收费', 'At most 10 Lambda runs at once; no extra charge'), num('$0')],
     [t('流量日志', 'Traffic logs'), t('计入流量监控：每 GB 日志 $0.25', 'Billed to the traffic monitor: $0.25 per GB of log lines'), num('< $0.01')],
@@ -378,12 +378,12 @@ function security(root) {
       'src/engine.js: pure functions with bounded loops (90 points), no eval or dynamic code.'),
     t('src/app.js：innerHTML 只用于检查过的棋子和固定的翻译文本；服务器消息用 textContent；只请求同源的 /api/game；localStorage 只保存固定的枚举值。i18n.js、docs.js、diagram.js 只用 textContent。',
       'src/app.js: innerHTML is used only with checked pieces and fixed translated text; server messages use textContent; it only calls same-origin /api/game; localStorage holds only fixed enum values. i18n.js, docs.js and diagram.js use textContent only.'),
-    t('cdk/lib/xiangqi-site-stack.ts：Lambda 角色只有 4 个权限，没有 "*"；存储桶禁止公开访问、禁用 ACL、加密、拒绝非 HTTPS，只允许这个分发 GetObject；函数 URL 只允许这个分发调用；表加密并有删除保护；日志保留 7 天。',
-      'cdk/lib/xiangqi-site-stack.ts: the Lambda role has 4 permissions and no "*"; the bucket blocks public access, disables ACLs, is encrypted, denies non-HTTPS and lets only this distribution GetObject; only this distribution may invoke the function URL; the table is encrypted with deletion protection; logs are kept 7 days.'),
+    t('cdk/lib/xiangqi-site-stack.ts：Lambda 角色只有 4 个权限，没有 "*"；存储桶禁止公开访问、禁用 ACL、加密、拒绝非 HTTPS，只允许这个分发 GetObject；函数 URL 只允许这个分发调用；表加密并有删除保护；两个 Lambda（棋局 API 和证书辅助函数）的日志都写入本堆栈的日志组，保留 90 天。',
+      'cdk/lib/xiangqi-site-stack.ts: the Lambda role has 4 permissions and no "*"; the bucket blocks public access, disables ACLs, is encrypted, denies non-HTTPS and lets only this distribution GetObject; only this distribution may invoke the function URL; the table is encrypted with deletion protection; both Lambdas (the game API and the certificate helper) log to this stack’s log groups, kept 90 days.'),
     t('scripts/dev-server.mjs 只监听 127.0.0.1，并防止路径穿越；.github/workflows/deploy.yml 只有 contents: read 权限。',
       'scripts/dev-server.mjs listens only on 127.0.0.1 and guards against path traversal; .github/workflows/deploy.yml has only contents: read.'),
-    t('测试：52 个 Node 测试和 7 个 CDK 测试覆盖安全路径——注入式请求体、Origin（包括 null 和其他 dliu.com 网站）、内容类型、超大请求体、并发写入、无泄露的 500、伪造的棋局数据、响应头、IAM 权限、删除保护和日志保留。',
-      'Tests: 52 Node tests and 7 CDK tests cover the security paths — injection-style bodies, Origin (including null and other dliu.com sites), content types, oversized bodies, concurrent writes, leak-free 500s, forged game data, response headers, IAM permissions, deletion protection and log retention.'),
+    t('测试：52 个 Node 测试和 8 个 CDK 测试覆盖安全路径——注入式请求体、Origin（包括 null 和其他 dliu.com 网站）、内容类型、超大请求体、并发写入、无泄露的 500、伪造的棋局数据、响应头、IAM 权限、删除保护和日志保留。',
+      'Tests: 52 Node tests and 8 CDK tests cover the security paths — injection-style bodies, Origin (including null and other dliu.com sites), content types, oversized bodies, concurrent writes, leak-free 500s, forged game data, response headers, IAM permissions, deletion protection and log retention.'),
   ]));
 
   add('h2', t('依赖与密钥扫描', 'Dependency and secret scans'));
