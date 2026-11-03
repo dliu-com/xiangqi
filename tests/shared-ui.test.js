@@ -29,7 +29,7 @@ test('every page has the shared header with the 象 seal, and the shared footer 
     const page = read(file);
     assert.ok(page.includes('<link rel="icon" href="/favicon.svg" type="image/svg+xml">'), file);
     assert.ok(page.includes('<body class="dl-page">'), file);
-    assert.ok(page.includes('<a class="dl-brand" href="/"><img class="dl-logo" src="/favicon.svg" alt="" width="32" height="32"><span data-en="Xiangqi">中国象棋</span></a>'), file);
+    assert.ok(page.includes('<a class="dl-brand" href="/"><img class="dl-logo" src="/favicon.svg" alt="" width="32" height="32"><span data-en="DL Xiangqi">DL 中国象棋</span></a>'), file);
     assert.match(page, /<main class="dl-main[" ]/, file);
     assert.ok(page.includes(`<footer class="dl-footer"><a class="dl-footer-logo" href="https://dliu.com" aria-label="dliu.com"><img src="${DL_ICON}" alt="" width="24" height="24"></a> <a href="https://dliu.com">dliu.com</a>`), file);
     assert.match(page, / · <a href="\/docs" data-en="Docs">文档<\/a><\/footer>/, file);

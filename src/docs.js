@@ -326,7 +326,7 @@ function show(scroll) {
     if (link.dataset.tab === current) link.setAttribute('aria-current', 'page');
     else link.removeAttribute('aria-current');
   }
-  document.title = `${t(...TITLES[current])} · ${t('文档 · 中国象棋', 'Docs · Xiangqi')}`;
+  document.title = `${t(...TITLES[current])} · ${t('文档 · DL 中国象棋', 'Docs · DL Xiangqi')}`;
   if (scroll) window.scrollTo(0, 0);
 }
 
