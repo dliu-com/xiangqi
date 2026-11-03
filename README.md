@@ -35,14 +35,19 @@ Chinese is the default. The header's 中文 | English switcher (a 文/A button o
 
 ## Security
 
-Threat-modelled and penetration-tested against the live site on 3 November 2026; the Security tab of `/docs` lists every test, the threat model and the accepted risks. The tests led to these fixes:
+Threat-modelled (assets, actors, trust boundaries, data flows, STRIDE per component, denial of wallet), code-reviewed and penetration-tested against the live site on 3 November 2026. The Security tab of `/docs` has the full threat model, the live test table (test, expected, actual, date), the findings XQ-01 to XQ-19 with their status and commits, the code review, the dependency and secret scans, and the accepted risks.
 
-- A strict Content-Security-Policy (`script-src 'self'`, no inline code, `frame-ancestors 'none'`) and a Permissions-Policy, on the pages and on `/api/game`. The API now gets the same security headers as the pages.
-- CloudFront removes S3's `server`, `x-amz-version-id` and `x-amz-server-side-encryption` headers.
-- The Lambda's reserved concurrency is 10, so a request flood cannot take the Lambda concurrency the account's other sites share.
-- The browser checks every piece in a server response (known sides and piece types only) before drawing it.
+Rerun the live tests at any time:
 
-Accepted by design: anyone can change the one shared game (there are no accounts), there is no WAF or rate limit, and the game has no backup.
+```sh
+make security-test   # scripts/security-test.sh: 96 non-destructive checks; exits 1 if any fails
+```
+
+The script needs curl, openssl, node and read access to this stack's outputs through the AWS CLI. Its writes use only stale revisions or impossible actions, and it checks that the game's revision is unchanged at the end (a real player moving during the run would trip that last check).
+
+Fixed: a strict Content-Security-Policy and Permissions-Policy on pages and `/api/game`; S3 `server`/`x-amz-*` headers removed; Lambda reserved concurrency 10; the browser validates every piece in a server response; the Lambda role has only `logs:CreateLogStream`/`logs:PutLogEvents` on its log group and `dynamodb:GetItem`/`PutItem` on its table; DynamoDB deletion protection; no high or critical `npm audit` findings; GitHub Actions pinned to commit SHAs. Every fix has a unit, API or CDK test.
+
+Waiting on the owner's decision (they cost money, delete data or change IAM): a WAF rate-based rule or budget alert against request floods, point-in-time recovery for the game, expiring old S3 object versions, and a GitHub OIDC deploy role instead of access keys. Accepted by design: anyone can change the one shared game.
 
 ## Project structure
 
