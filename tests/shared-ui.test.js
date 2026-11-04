@@ -93,3 +93,11 @@ test('the app stylesheet leaves the header, buttons, dialogs and palette to the 
   assert.doesNotMatch(css, /color-scheme|--(bg|panel|ink|muted|line|gold|red):/);
   assert.doesNotMatch(css, /^\s*(h1|h2|button|a|body)\s*\{[^}]*\b(font|color|background)/m);
 });
+
+test('the Architecture tab starts with a link to the source code', () => {
+  const page = read('src/docs.html');
+  const article = page.slice(page.indexOf('<article id="architecture"'), page.indexOf('</article>'));
+  assert.match(article, /^<article id="architecture" class="dl-docs">\s*<p class="dl-docs-repo"><span data-en="Source code:">源代码：<\/span> <a href="https:\/\/github\.com\/dliu-com\/xiangqi">github\.com\/dliu-com\/xiangqi<\/a><\/p>\s*<h2 /);
+  // docs.js rebuilds a tab after its heading, so the link before it stays.
+  assert.ok(read('src/docs.js').includes("const heading = root.querySelector(':scope > h2');"));
+});

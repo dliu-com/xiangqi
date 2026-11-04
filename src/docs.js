@@ -433,8 +433,9 @@ const BUILDERS = { architecture, cost, security, health };
 function build() {
   for (const id of TABS) {
     const root = document.getElementById(id);
-    // Keep the static, translated heading; rebuild everything after it.
-    while (root.lastElementChild && root.lastElementChild !== root.firstElementChild) root.lastElementChild.remove();
+    // Keep the static, translated part (the source link and the heading); rebuild everything after the heading.
+    const heading = root.querySelector(':scope > h2');
+    while (root.lastElementChild && root.lastElementChild !== heading) root.lastElementChild.remove();
     BUILDERS[id](root);
   }
 }
