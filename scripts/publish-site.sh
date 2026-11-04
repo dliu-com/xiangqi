@@ -23,12 +23,14 @@ node "$PROJECT_DIR/scripts/build-site.mjs" "$BUILD" >/dev/null
 for script in engine.js i18n.js agent-tools.js diagram.js health-checks.js docs.js docs-health.js app.js; do node --check "$BUILD/$script"; done
 # Upload dependencies first and the entrypoint last. Scripts, the stylesheet and the logo are held at the edge for a day
 # (the invalidation below refreshes them on publish); HTML pages are always revalidated.
-for filename in engine.js i18n.js agent-tools.js diagram.js health-checks.js docs.js docs-health.js app.js styles.css favicon.svg 404.html; do
+for filename in engine.js i18n.js agent-tools.js diagram.js health-checks.js docs.js docs-health.js app.js styles.css favicon.svg 404.html robots.txt sitemap.xml; do
   cache='public, max-age=300, s-maxage=86400, stale-while-revalidate=86400'
   case "$filename" in
     *.js) mime='text/javascript; charset=utf-8' ;;
     *.css) mime='text/css; charset=utf-8' ;;
     *.svg) mime='image/svg+xml' ;;
+    *.xml) mime='application/xml; charset=utf-8' ;;
+    *.txt) mime='text/plain; charset=utf-8' ;;
     *.html) mime='text/html; charset=utf-8'; cache='public, max-age=0, must-revalidate' ;;
   esac
   aws s3 cp "$BUILD/$filename" "s3://$SITE_BUCKET_NAME/$filename" --content-type "$mime" --cache-control "$cache" --only-show-errors

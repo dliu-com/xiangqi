@@ -33,6 +33,10 @@ Chinese is the default. The header's 中文 | English switcher (a 文/A button o
 
 `/docs` is `src/docs.html`, uploaded to the S3 key `docs` (no URL rewriting at the edge), with tabs for **Architecture** (`#architecture`), **Cost**, **Security** and **Health** (`#health`, see "Health checks" below). `src/docs.js` builds the tabs in both languages with `src/diagram.js`, the shared diagram kit (from traffic-monitor, as used by video). There is no API tab: the game API is internal to the page. Update the docs when the architecture, prices or security controls change.
 
+## Search engines
+
+`src/robots.txt` allows all crawling and points to `src/sitemap.xml`, which lists the public, canonical HTML pages: `/` (the board) and `/docs` (its tabs are `#` fragments of the same page). Not listed: `/docs/health` (a 301 to `/docs#health`), `/docs/health.md` (the machine-readable copy of the Health tab), `/api/game` and `/health` (JSON), error pages and static assets. Chinese and English share each URL, so there are no language alternates. `scripts/publish-site.sh` uploads both files; `tests/sitemap.test.js` keeps the list to real, indexable pages. Add a page to the sitemap when the site gains one.
+
 ## Health checks for status.dliu.com
 
 The site follows the dliu.com health contract (`status/HEALTH.md`) so status.dliu.com can test it as an anonymous guest, every 15 minutes, without changing the shared game:
