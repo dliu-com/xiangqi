@@ -3,7 +3,7 @@ import { flow, tiers, stats, table, callout, more } from './diagram.js';
 import { health } from './docs-health.js';
 
 const TABS = ['architecture', 'cost', 'security', 'health'];
-const TITLES = { architecture: ['架构', 'Architecture'], cost: ['运行成本', 'Cost'], security: ['安全', 'Security'], health: ['测试', 'Testing'] };
+const TITLES = { architecture: ['架构', 'Architecture'], cost: ['运行成本', 'Cost'], security: ['安全', 'Security'], health: ['健康', 'Health'] };
 const num = text => ({ text, className: 'num' });
 const mono = text => ({ text, className: 'mono' });
 
@@ -110,7 +110,7 @@ function architecture(root) {
 
   add('h2', t('缓存', 'Caching'));
   root.append(table([t('内容', 'What'), t('缓存方式', 'Cached'), t('原因', 'Why')], [
-    [mono('app.js, engine.js, i18n.js, docs.js, diagram.js, agent-tools.js, styles.css, favicon.svg'), t('边缘最多 1 天，浏览器 5 分钟', 'Up to 1 day at the edge, 5 minutes in browsers'), t('每次发布都会使 /* 失效，所以不会过时', 'Every publish invalidates /*, so nothing goes stale')],
+    [mono('app.js, engine.js, i18n.js, docs.js, docs-health.js, health-checks.js, diagram.js, agent-tools.js, styles.css, favicon.svg'), t('边缘最多 1 天，浏览器 5 分钟', 'Up to 1 day at the edge, 5 minutes in browsers'), t('页面和模块用 ?v=<内容哈希> 加载它们，所以新页面总会拿到配套的新脚本；每次发布也会使 /* 失效', 'Pages and modules load them with ?v=<content hash>, so a new page always gets its matching scripts; every publish also invalidates /*')],
     [mono('index.html, docs, 404.html'), t('每次都重新验证', 'Always revalidated'), t('新版本发布后立即生效', 'A new release shows at once')],
     [mono('/api/game'), t('从不缓存（no-store）', 'Never cached (no-store)'), t('棋局存放在 DynamoDB，每次读取都是最新的', 'The game lives in DynamoDB; every read is current')],
     [mono('dl.css, dl-docs.css'), t('由 files.dliu.com 提供', 'Served by files.dliu.com'), t('所有 dliu.com 网站共用的外观', 'The look shared by every dliu.com site')],

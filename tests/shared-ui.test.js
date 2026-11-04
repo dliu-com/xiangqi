@@ -56,7 +56,7 @@ test('the docs page uses the shared docs look, with architecture, cost and secur
     assert.ok(page.includes(`href="/docs#${tab}" data-tab="${tab}"`), tab);
     assert.ok(page.includes(`<article id="${tab}" class="dl-docs"`), tab);
   }
-  assert.ok(readFileSync(new URL('../scripts/publish-site.sh', import.meta.url), 'utf8').includes('src/docs.html" "s3://$SITE_BUCKET_NAME/docs"'));
+  assert.ok(readFileSync(new URL('../scripts/publish-site.sh', import.meta.url), 'utf8').includes('$BUILD/docs.html" "s3://$SITE_BUCKET_NAME/docs"'));
 });
 
 test('every Chinese text in the static pages has an English version', () => {

@@ -1,7 +1,7 @@
 # DL 中国象棋 (xiangqi.dliu.com): guest testing
 
 How to test https://xiangqi.dliu.com as an anonymous guest, for machines and AI agents. This is the full technical version of the
-Testing tab at https://xiangqi.dliu.com/docs#health and is generated from the same data (src/health-checks.js in dliu-com/xiangqi). It follows the
+Health tab at https://xiangqi.dliu.com/docs#health and is generated from the same data (src/health-checks.js in dliu-com/xiangqi). It follows the
 dliu.com health contract used by status.dliu.com, which runs these checks every 15 minutes from Ireland
 (eu-west-1), the US (us-east-1) and Japan (ap-northeast-1).
 
@@ -20,7 +20,7 @@ A function is critical when the site counts as down without it.
 | Key | Name | Critical | What it does for a visitor | What is checked | Implementation |
 | --- | --- | --- | --- | --- | --- |
 | `pages` | Pages | yes | Shows the board so you can play | The board page, its styles and scripts load. | index.html, app.js, engine.js, styles.css and 404.html, served by CloudFront from a private S3 bucket. |
-| `docs` | Docs | no | Explains how the site works | The documentation pages load. | /docs (tabs: architecture, cost, security, testing at /docs#health) and /docs/health.md, served from S3; /docs/health redirects to /docs#health. |
+| `docs` | Docs | no | Explains how the site works | The documentation pages load. | /docs (tabs: architecture, cost, security, health at /docs#health) and /docs/health.md, served from S3; /docs/health redirects to /docs#health. |
 | `game` | Shared game | yes | Keeps the one game every device shares | The shared game can be read. | GET /api/game: CloudFront → Lambda function URL (IAM-signed) → DynamoDB GetItem of the single item gameId=current. |
 | `rules` | Move rules | yes | Makes sure only legal moves are saved | The move rules on the server work. | src/engine.js, the same file in the browser and in the Lambda; /health checks it finds Red’s 44 legal opening moves. |
 

@@ -82,6 +82,9 @@ export class XiangqiSiteStack extends Stack {
       maxTtl: Duration.days(1),
       enableAcceptEncodingGzip: true,
       enableAcceptEncodingBrotli: true,
+      // Pages load their scripts with ?v=<content hash> (scripts/build-site.mjs), so a new version is a new edge entry.
+      // Only v is in the key, so other query strings can't split the cache.
+      queryStringBehavior: cloudfront.CacheQueryStringBehavior.allowList('v'),
     });
 
     // Pages and /api/game share these headers. Scripts come only from this site; the shared dliu.com look only

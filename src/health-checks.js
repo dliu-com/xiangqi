@@ -20,7 +20,7 @@ export const FUNCTIONS = [
     whatZh: '说明网站如何运作', whatEn: 'Explains how the site works',
     howZh: '打开 /docs 和给机器读的 /docs/health.md', howEn: 'Opens /docs and /docs/health.md, the version for machines',
     downZh: '只是说明文档打不开，下棋不受影响。', downEn: 'Only the documentation is missing; playing is unaffected.',
-    detail: '/docs (tabs: architecture, cost, security, testing at /docs#health) and /docs/health.md, served from S3; /docs/health redirects to /docs#health.',
+    detail: '/docs (tabs: architecture, cost, security, health at /docs#health) and /docs/health.md, served from S3; /docs/health redirects to /docs#health.',
   },
   {
     key: 'game', name: 'Shared game', critical: true,

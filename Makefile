@@ -1,7 +1,7 @@
 AWS_REGION ?= eu-west-1
 STACK_NAME ?= XiangqiSite
 
-.PHONY: install serve test synth diff deploy-infra publish deploy security-test guest-check health-md
+.PHONY: install serve test synth diff deploy-infra publish deploy security-test guest-check health-md build
 
 install:
 	cd cdk && npm ci
@@ -38,3 +38,7 @@ guest-check:
 # Regenerate src/docs-health.md (/docs/health.md) after changing src/health-checks.js.
 health-md:
 	node scripts/health-md.mjs
+
+# The publishable site with ?v=<content hash> on every script, stylesheet and import, in dist/.
+build:
+	node scripts/build-site.mjs

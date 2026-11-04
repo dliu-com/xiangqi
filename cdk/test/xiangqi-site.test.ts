@@ -171,3 +171,12 @@ test('the old /docs/health address answers 301 to the Testing tab, and only that
   expect(result.headers.location.value).toBe('/docs#health');
   template.hasResourceProperties('AWS::CloudFront::Function', { FunctionConfig: Match.objectLike({ Runtime: 'cloudfront-js-2.0' }) });
 });
+
+test('static files are cached per ?v= version, and no other query string splits the cache', () => {
+  const distribution = Object.values(template.findResources('AWS::CloudFront::Distribution'))[0] as any;
+  const policyId = distribution.Properties.DistributionConfig.DefaultCacheBehavior.CachePolicyId.Ref;
+  const policy = template.findResources('AWS::CloudFront::CachePolicy')[policyId].Properties.CachePolicyConfig;
+  expect(policy.ParametersInCacheKeyAndForwardedToOrigin.QueryStringsConfig).toEqual({ QueryStringBehavior: 'whitelist', QueryStrings: ['v'] });
+  expect(policy.ParametersInCacheKeyAndForwardedToOrigin.CookiesConfig.CookieBehavior).toBe('none');
+  expect(policy.ParametersInCacheKeyAndForwardedToOrigin.HeadersConfig.HeaderBehavior).toBe('none');
+});

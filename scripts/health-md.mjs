@@ -11,7 +11,7 @@ export function renderHealthMarkdown() {
   return `# DL 中国象棋 (xiangqi.dliu.com): guest testing
 
 How to test ${SITE} as an anonymous guest, for machines and AI agents. This is the full technical version of the
-Testing tab at ${SITE}/docs#health and is generated from the same data (src/health-checks.js in dliu-com/xiangqi). It follows the
+Health tab at ${SITE}/docs#health and is generated from the same data (src/health-checks.js in dliu-com/xiangqi). It follows the
 dliu.com health contract used by status.dliu.com, which runs these checks every 15 minutes from Ireland
 (eu-west-1), the US (us-east-1) and Japan (ap-northeast-1).
 

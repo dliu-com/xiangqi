@@ -1,4 +1,4 @@
-// The Testing tab (/docs#health) of the docs page, for people: flows, numbers, a plain-words table and a chart.
+// The Health tab (/docs#health) of the docs page, for people: flows, numbers, a plain-words table and a chart.
 // No exact technical facts here (status codes, headers, formats); those are in /docs/health.md, for machines.
 import { t } from './i18n.js';
 import { flow, stats, table, callout } from './diagram.js';

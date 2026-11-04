@@ -118,9 +118,9 @@ test('/docs/health.md is the generated, full technical version', () => {
   }
 });
 
-test('the Testing tab (/docs#health) is for people: numbers, flows, a plain table, a chart and no exact technical details', () => {
+test('the Health tab (/docs#health) is for people: numbers, flows, a plain table, a chart and no exact technical details', () => {
   const page = read('src/docs.html');
-  assert.ok(page.includes('<a href="/docs#health" data-tab="health" data-en="Testing">测试</a>'));
+  assert.ok(page.includes('<a href="/docs#health" data-tab="health" data-en="Health">健康</a>'));
   assert.ok(page.includes('<a href="/docs#architecture" data-tab="architecture" aria-current="page" data-en="Architecture">架构</a>'));
   assert.ok(page.includes('<article id="health" class="dl-docs" hidden>'));
   const docs = read('src/docs.js');
@@ -167,5 +167,5 @@ test('every guest-check marker is in the file S3 serves, and both docs pages are
     assert.ok(read(file).includes(check.marker), `${check.url}: ${check.marker}`);
   }
   const publish = read('scripts/publish-site.sh');
-  assert.ok(publish.includes(`src/docs-health.md" "s3://$SITE_BUCKET_NAME/docs/health.md" --content-type 'text/markdown; charset=utf-8'`));
+  assert.ok(publish.includes(`$BUILD/docs-health.md" "s3://$SITE_BUCKET_NAME/docs/health.md" --content-type 'text/markdown; charset=utf-8'`));
 });
