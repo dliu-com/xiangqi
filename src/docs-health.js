@@ -3,7 +3,7 @@
 // No exact technical facts here (status codes, headers, formats); those are in /docs/health.md, for machines.
 import { t } from './i18n.js';
 import { flow, tiers, stats, table, callout } from './diagram.js';
-import { FUNCTIONS, CHECKS, NOT_TESTED, PLACES } from './health-checks.js';
+import { FUNCTIONS, CHECKS, NOT_TESTED, PLACES, STATUS_PAGE } from './health-checks.js';
 
 const NAMES = { pages: ['页面', 'Pages'], docs: ['文档', 'Docs'], game: ['共享棋局', 'Shared game'], rules: ['行棋规则', 'Move rules'] };
 const checksFor = key => CHECKS.filter(check => check.fn.split(', ').includes(key)).length;
@@ -89,18 +89,23 @@ async function showLiveStatus(rows) {
   }
 }
 
+function linkTo(href, text) {
+  const link = document.createElement('a');
+  link.href = href;
+  link.textContent = text;
+  return link;
+}
+
 function markdownLink(text) {
   const p = document.createElement('p');
-  const link = document.createElement('a');
-  link.href = '/docs/health.md';
-  link.textContent = text;
-  p.append(link);
+  p.append(linkTo('/docs/health.md', text));
   return p;
 }
 
 export function health(root) {
   const add = writer(root);
   const top = markdownLink(t('给机器读的版本：/docs/health.md', 'Machine-readable version: /docs/health.md'));
+  top.append(' · ', linkTo(STATUS_PAGE, t('实时状态：', 'Live status: ') + STATUS_PAGE.replace(/^https:\/\//, '')));
   top.className = 'dg-note';
   root.append(top);
   const places = PLACES.map(place => t(...place)).join(t('、', ', '));

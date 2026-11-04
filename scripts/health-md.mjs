@@ -2,7 +2,7 @@
 // Run `node scripts/health-md.mjs` after changing src/health-checks.js; tests/health.test.js fails if they differ.
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { SITE, FUNCTIONS, HEALTH_FUNCTIONS, CHECKS, NOT_TESTED, HEALTH_EXAMPLE } from '../src/health-checks.js';
+import { SITE, STATUS_PAGE, FUNCTIONS, HEALTH_FUNCTIONS, CHECKS, NOT_TESTED, HEALTH_EXAMPLE } from '../src/health-checks.js';
 
 const cell = text => String(text).replace(/\|/g, '\\|');
 const row = cells => `| ${cells.map(cell).join(' | ')} |`;
@@ -15,6 +15,8 @@ Health tab at ${SITE}/docs#health and is generated from the same data (src/healt
 dliu.com health contract used by status.dliu.com, which runs these checks every 15 minutes from Ireland
 (eu-west-1), Virginia (us-east-1) and Tokyo (ap-northeast-1), and hourly from China (China Telecom and China Unicom
 probes).
+
+Live status: ${STATUS_PAGE}
 
 ## Rules
 

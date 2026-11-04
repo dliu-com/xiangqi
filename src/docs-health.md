@@ -6,6 +6,8 @@ dliu.com health contract used by status.dliu.com, which runs these checks every 
 (eu-west-1), Virginia (us-east-1) and Tokyo (ap-northeast-1), and hourly from China (China Telecom and China Unicom
 probes).
 
+Live status: https://status.dliu.com/site/xiangqi
+
 ## Rules
 
 - Read only: send only `GET` or `HEAD`, with no cookies, no `Authorization` header and no credentials.

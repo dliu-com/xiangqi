@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
-import { FUNCTIONS, HEALTH_FUNCTIONS, CHECKS, SITE, NOT_TESTED } from '../src/health-checks.js';
+import { FUNCTIONS, HEALTH_FUNCTIONS, CHECKS, SITE, NOT_TESTED, STATUS_PAGE } from '../src/health-checks.js';
 import { renderHealthMarkdown } from '../scripts/health-md.mjs';
 
 const read = file => readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
@@ -136,9 +136,12 @@ test('the Health tab (/docs#health) is for people: numbers, flows, a plain table
   for (const tone of ['good', 'warn', 'bad']) assert.ok(script.includes(`tone: '${tone}'`), tone);
   assert.match(script, /barChart\(/);
   assert.ok(script.includes("t('如果坏了，你会看到', 'If it broke, you would notice')"));
-  // A link to the machine-readable version right under the heading, and again at the end.
+  // Right under the heading: this site's live status page and the machine-readable version (again at the end).
+  assert.equal(STATUS_PAGE, 'https://status.dliu.com/site/xiangqi');
+  assert.ok(script.includes("linkTo(STATUS_PAGE, t('实时状态：', 'Live status: ')"));
+  assert.ok(read('src/docs-health.md').includes(`Live status: ${STATUS_PAGE}`));
   const body = script.slice(script.indexOf('export function health'));
-  assert.ok(script.includes("link.href = '/docs/health.md';"));
+  assert.ok(script.includes("p.append(linkTo('/docs/health.md', text));"));
   assert.ok(body.indexOf("markdownLink(t('给机器读的版本：/docs/health.md', 'Machine-readable version: /docs/health.md'))") < body.indexOf("add('p'"));
   assert.ok(body.trimEnd().endsWith("root.append(markdownLink(t('给机器读的技术版本（Markdown）', 'Technical version for machines (Markdown)')));\n}"));
   // Nothing folded and no exact technical details: no <details>, code, status codes, content types or JSON.
