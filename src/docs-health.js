@@ -1,7 +1,8 @@
-// The Health tab (/docs#health) of the docs page, for people: flows, numbers, a plain-words table and a chart.
+// The Health tab (/docs#health) of the docs page, for people: numbers, a tier diagram in the same style and colours as the
+// Architecture tab, the outcomes, a plain-words table and a chart.
 // No exact technical facts here (status codes, headers, formats); those are in /docs/health.md, for machines.
 import { t } from './i18n.js';
-import { flow, stats, table, callout } from './diagram.js';
+import { flow, tiers, stats, table, callout } from './diagram.js';
 import { FUNCTIONS, CHECKS, NOT_TESTED, PLACES } from './health-checks.js';
 
 const NAMES = { pages: ['页面', 'Pages'], docs: ['文档', 'Docs'], game: ['共享棋局', 'Shared game'], rules: ['行棋规则', 'Move rules'] };
@@ -88,9 +89,22 @@ async function showLiveStatus(rows) {
   }
 }
 
+function markdownLink(text) {
+  const p = document.createElement('p');
+  const link = document.createElement('a');
+  link.href = '/docs/health.md';
+  link.textContent = text;
+  p.append(link);
+  return p;
+}
+
 export function health(root) {
   const add = writer(root);
+  const top = markdownLink(t('给机器读的版本：/docs/health.md', 'Machine-readable version: /docs/health.md'));
+  top.className = 'dg-note';
+  root.append(top);
   const places = PLACES.map(place => t(...place)).join(t('、', ', '));
+  const schedule = t(`${PLACES.slice(0, 3).map(place => place[0]).join('、')}每 15 分钟一次；中国每小时一次`, `${PLACES.slice(0, 3).map(place => place[1]).join(', ')} every 15 min; China hourly`);
 
   add('p', t('status.dliu.com 每 15 分钟像普通访客一样来看看本网站：不登录，只看不动，从不走棋，所以不会打扰正在下的棋。',
     'Every 15 minutes, status.dliu.com looks at this site the way any visitor would: no sign-in, looking only, never playing a move, so games in progress are never disturbed.'), 'lead');
@@ -99,21 +113,44 @@ export function health(root) {
     [String(FUNCTIONS.length), t('项功能被测试', 'functions tested'), 'board'],
     [String(CHECKS.length), t('项检查', 'checks each time'), 'filter'],
     [t('每 15 分钟', 'Every 15 min'), t('全天候', 'day and night'), 'clock'],
-    [t(`从 ${PLACES.length} 个地方`, `From ${PLACES.length} places`), places, 'route53'],
+    [t(`从 ${PLACES.length} 个地方`, `From ${PLACES.length} places`), schedule, 'route53'],
     ['0', t('次登录', 'sign-ins needed'), 'lock'],
     ['0', t('步棋被走动', 'moves played'), 'shield'],
   ]));
 
-  root.append(flow({
-    title: t('一次测试怎么进行', 'How a test run goes'),
-    numbered: true,
-    steps: [
-      { icon: 'bot', title: t('来访', 'Visit'), text: t(`status.dliu.com 从${places}以访客身份来访`, `status.dliu.com visits as a guest from ${places}`) },
-      { icon: 'page', title: t('打开页面', 'Open the pages'), text: t('棋盘、脚本、样式和文档', 'the board, scripts, styles and docs') },
-      { icon: 'board', title: t('看看棋局', 'Look at the game'), text: t('读取 /api/game，从不走棋', 'reads /api/game, never plays a move') },
-      { icon: 'shield', title: t('网站自检', 'Site checks itself'), text: t('/health 读一次数据库，再算一遍开局走法', '/health reads the database once and works out the opening moves') },
-      { icon: 'dynamodb', title: t('得出结果', 'Result'), text: t('每项功能：正常、变慢或故障', 'for each function: working, slow or not working') },
+  root.append(tiers({
+    title: t('如何测试本网站', 'How this site is tested'),
+    rows: [
+      {
+        label: t('测试者', 'Testers'), badge: t('访客', 'Guest'), tone: 'untrusted',
+        nodes: [
+          { icon: 'bot', title: 'status.dliu.com', text: schedule },
+        ],
+      },
+      {
+        label: 'CloudFront', badge: t('边缘', 'Edge'), tone: 'edge', link: t('HTTPS，不登录', 'HTTPS, no sign-in'),
+        nodes: [
+          { icon: 'page', title: t('页面和文档', 'Pages and docs'), text: t('首页（棋盘）、脚本、样式和文档', 'the home page (board), scripts, styles and docs') },
+          { icon: 'cloudfront', title: '/api/game', text: t('读取当前棋局，从不走棋', 'reads the current game, never plays a move') },
+          { icon: 'shield', title: '/health', text: t('请网站自己检查一遍，每分钟最多一次', 'asks the site to check itself, at most once a minute') },
+        ],
+      },
+      {
+        label: 'Lambda', badge: 'API', tone: 'app', link: t('由 CloudFront 签名', 'signed by CloudFront'),
+        nodes: [
+          { icon: 'lambda', title: t('自检', 'Self-check'), text: t('检查数据库和规则，只读', 'checks the database and the rules, read only') },
+          { icon: 'filter', title: t('规则检查', 'Rule check'), text: t('必须算出红方开局的 44 种走法', 'must find Red’s 44 opening moves') },
+        ],
+      },
+      {
+        label: t('AWS 账户', 'AWS account'), badge: t('私有', 'Private'), tone: 'private', link: t('只读一次，从不写入', 'one read, never a write'),
+        nodes: [
+          { icon: 'dynamodb', title: 'DynamoDB', text: t('读取一次棋局', 'one read of the game') },
+          { icon: 's3', title: 'S3', text: t('网页文件，经 CloudFront 读取', 'the page files, read through CloudFront') },
+        ],
+      },
     ],
+    note: t('每项功能得到绿、黄或红：连续两次失败才算故障。', 'Each function ends up green, amber or red; it only counts as down after two failed runs in a row.'),
   }));
 
   const outcomes = flow({
@@ -147,10 +184,5 @@ export function health(root) {
   root.append(callout('shield', t('本网站没有登录，所以测试看到的就是任何访客看到的。规则和保存另由代码库里的自动测试检查。',
     'The site has no sign-in, so the tests see exactly what any visitor sees. The rules and saving are also checked by automated tests in the code.')));
 
-  const p = document.createElement('p');
-  const link = document.createElement('a');
-  link.href = '/docs/health.md';
-  link.textContent = t('给机器读的技术版本（Markdown）', 'Technical version for machines (Markdown)');
-  p.append(link);
-  root.append(p);
+  root.append(markdownLink(t('给机器读的技术版本（Markdown）', 'Technical version for machines (Markdown)')));
 }

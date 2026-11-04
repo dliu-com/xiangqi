@@ -1,8 +1,8 @@
 // The single source for how a guest tests xiangqi.dliu.com: /docs#health (people), /docs/health.md (machines),
 // scripts/guest-checks.mjs (runs them) and tests/health.test.js (keeps them in sync with backend/handler.cjs).
 export const SITE = 'https://xiangqi.dliu.com';
-// Where status.dliu.com checks from.
-export const PLACES = [['爱尔兰', 'Ireland'], ['美国', 'the US'], ['日本', 'Japan']];
+// Where status.dliu.com checks from: the first three every 15 minutes, China hourly.
+export const PLACES = [['爱尔兰', 'Ireland'], ['弗吉尼亚', 'Virginia'], ['东京', 'Tokyo'], ['中国', 'China']];
 
 // critical: the site counts as down without it.
 export const FUNCTIONS = [

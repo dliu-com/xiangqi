@@ -130,12 +130,17 @@ test('the Health tab (/docs#health) is for people: numbers, flows, a plain table
   const script = read('src/docs-health.js');
   assert.match(script, /export function health\(root\)/);
   assert.match(script, /root\.append\(stats\(\[/);
-  assert.equal((script.match(/flow\(\{/g) || []).length, 2);
+  assert.match(script, /root\.append\(tiers\(\{/);
+  for (const tone of ['untrusted', 'edge', 'app', 'private']) assert.ok(script.includes(`tone: '${tone}'`), tone);
+  assert.equal((script.match(/flow\(\{/g) || []).length, 1);
   for (const tone of ['good', 'warn', 'bad']) assert.ok(script.includes(`tone: '${tone}'`), tone);
   assert.match(script, /barChart\(/);
   assert.ok(script.includes("t('如果坏了，你会看到', 'If it broke, you would notice')"));
-  assert.ok(script.includes("link.textContent = t('给机器读的技术版本（Markdown）', 'Technical version for machines (Markdown)');"));
+  // A link to the machine-readable version right under the heading, and again at the end.
+  const body = script.slice(script.indexOf('export function health'));
   assert.ok(script.includes("link.href = '/docs/health.md';"));
+  assert.ok(body.indexOf("markdownLink(t('给机器读的版本：/docs/health.md', 'Machine-readable version: /docs/health.md'))") < body.indexOf("add('p'"));
+  assert.ok(body.trimEnd().endsWith("root.append(markdownLink(t('给机器读的技术版本（Markdown）', 'Technical version for machines (Markdown)')));\n}"));
   // Nothing folded and no exact technical details: no <details>, code, status codes, content types or JSON.
   assert.doesNotMatch(script, /\bmore\(|\bcode\(|\bmono\(|details|<code|HEALTH_EXAMPLE|HEALTH_FUNCTIONS|application\/|text\/html|\b(200|301|404|405|415|503)\b|https?:\/\//);
   assert.doesNotMatch(script, /CHECKS\.map|check\.(url|status|type|marker|location)/);
